@@ -153,12 +153,17 @@
 			}
 			return false;
 		}
-		public function AuthenticateToken()
-		{
-			if($this->isUserLoggedIn()) {
-				return true;
-				} else {
-				if(isset($_SERVER['HTTP_X_ACCESS_TOKEN'])&&!empty($_SERVER['HTTP_X_ACCESS_TOKEN'])) {
+	public function AuthenticateToken()
+	{
+		if($this->isUserLoggedIn()) {
+			return true;
+			} else {
+			if(isset($_SERVER['HTTP_X_ACCESS_TOKEN'])&&!empty($_SERVER['HTTP_X_ACCESS_TOKEN'])) {
+				// Validate JWT token
+				$jwt = new JwtLib();
+				$validated = $jwt->validateToken($_SERVER['HTTP_X_ACCESS_TOKEN']);
+
+				if($validated) {
 					$sessionModel = new SessionModel();
 					$session = $sessionModel->where('session_token', $_SERVER['HTTP_X_ACCESS_TOKEN'])->where('status', 1)->first();
 					if($session){
@@ -176,8 +181,9 @@
 					}
 				}
 			}
-			return false;
 		}
+		return false;
+	}
 
 		public function HttpAppVersion()
 		{
@@ -235,9 +241,9 @@
 		{
 			$value = $value ?? $this->_output ?? [];
 			$this->_output['version'] = array(
-				'version' => '1.0.0',
-				'force_update' => '0',
-				'app_url' => 'https://pds/api-1.0',
+				'version' => $this->AppConfig->AppCurrentVersion,
+				'force_update' => $this->AppConfig->appForceUpdate,
+				'app_url' => $this->AppConfig->appDownloadUrl,
 			);
 			return $this->response->setStatusCode($this->_status)->setJSON($value);
 		}

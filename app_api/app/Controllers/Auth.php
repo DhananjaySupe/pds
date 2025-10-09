@@ -1,6 +1,8 @@
 <?php namespace App\Controllers;
 	use App\Models\SessionModel;
 	use App\Models\UserModel;
+	use App\Models\UserAttendanceModel;
+	use App\Libraries\JwtLib;
 
 	class Auth extends BaseController
 	{
@@ -22,45 +24,66 @@
 					if ($isvalid) {
 						$userModel = new UserModel();
 						$user = $userModel->where('phone', $post['phone'])->first();
-							if ($user && $user['status'] && password_verify($post['password'], $user['password'])) {
-									$sessionToken = md5(uniqid(rand(), true));
-									$sessionModel = new SessionModel();
-									if($user['user_id']){
-										//Remove Multiple Login
-										//$sessionModel->updateLasttToken($member['user_id'],array('status' => 0));
-									}
-									$session_id = $sessionModel->insert(array(
-									'user_id' => $user['user_id'],
-									'session_token' => $sessionToken,
-									'platform' => isset($post['platform']) ? $post['platform'] : '',
-									'created_at' => date("Y-m-d H:i:s"),
-									));
-									if ($session_id > 0) {
-										$param = array();
-										$param['fcm_token'] = isset($post['fcm_token']) ? $post['fcm_token'] : '';
-										$userModel->update($user['user_id'],$param);
-										//echo $userModel->getLastQuery()->getQuery();exit;
-										$sessionData = $this->sessionData($user['user_id']);
-										$data[] = array(
-										'id' => $sessionData['id'],
-										'name' => $sessionData['name'],
-										'email' => $sessionData['email'],
-										'phone' => $sessionData['phone'],
-										'role' => $sessionData['role'],
-										'status' => $sessionData['status']);
-										$this->setSuccess("Login Successfully");
-										$this->setOutput($sessionToken, 'sessionToken');
-										$this->setOutput(array('sessionData' => $data));
-									}
-								} else {
-								if($user && $user['status'] == 0){
-									$this->setError('Login Failed! Your account is suspended!');
+						if ($user && $user['status'] && password_verify($post['password'], $user['password'])) {
+							/* Two-Factor Authentication flow */
+							if ($this->AppConfig->twoFactorAuth['enabled']) {
+								sendOtp($user['user_id']);
+								$this->setSuccess('OTP sent successfully. Please verify to continue.');
+							} else {
+								// Generate JWT token
+								$jwt = new JwtLib();
+								$AppConfig = new \Config\AppConfig();
+								$tokenPayload = [
+								'user_id' => $user['user_id'],
+								'phone' => $user['phone'],
+								'role' => $user['role_id']
+								];
+								$sessionToken = $jwt->generateToken($tokenPayload, $AppConfig->jwt_expiry);
+
+								$sessionModel = new SessionModel();
+								if($user['user_id']){
+									//Remove Multiple Login
+									//$sessionModel->updateLasttToken($member['user_id'],array('status' => 0));
 								}
-								else {
-									$this->setError('You entered an incorrect phone or password. Please try again.');
+								$session_id = $sessionModel->insert(array(
+								'user_id' => $user['user_id'],
+								'session_token' => $sessionToken,
+								'platform' => isset($post['platform']) ? $post['platform'] : '',
+								'logged_in' => date("Y-m-d H:i:s"),
+								));
+								if ($session_id > 0) {
+									$param = array();
+									$param['fcm_token'] = isset($post['fcm_token']) ? $post['fcm_token'] : '';
+									$userModel->update($user['user_id'],$param);
+
+									// Record first login and last login in attendance
+									$attendanceModel = new UserAttendanceModel();
+									// Record first login of the day (only if not already recorded)
+									$attendanceModel->recordLogin($user['user_id'], date('Y-m-d'));
+
+									//echo $userModel->getLastQuery()->getQuery();exit;
+									$sessionData = $this->sessionData($user['user_id']);
+									$data[] = array(
+									'id' => $sessionData['id'],
+									'name' => $sessionData['name'],
+									'email' => $sessionData['email'],
+									'phone' => $sessionData['phone'],
+									'role' => $sessionData['role'],
+									'status' => $sessionData['status']);
+									$this->setSuccess("Login Successfully");
+									$this->setOutput($sessionToken, 'sessionToken');
+									$this->setOutput(array('sessionData' => $data));
 								}
 							}
+							} else {
+							if($user && $user['status'] == 0){
+								$this->setError('Login Failed! Your account is suspended!');
+							}
+							else {
+								$this->setError('You entered an incorrect phone or password. Please try again.');
+							}
 						}
+					}
 					} else {
 					$this->setError($this->invalidApiKey);
 				}
@@ -78,8 +101,9 @@
 					$post = esc($this->getPost());
 					$isvalidrequest = true;
 					$errors = "";
-					if (!isset($post['name']) || empty($post['name'])) {
-						$this->setError("Please enter name.");
+					// Validate required fields
+					if (!isset($post['full_name']) || empty($post['full_name'])) {
+						$this->setError("Please enter full name.");
 						$isvalidrequest = false;
 					}
 					if ($isvalidrequest && (!isset($post['email']) || empty($post['email']))) {
@@ -90,100 +114,42 @@
 						$this->setError("Please enter phone.");
 						$isvalidrequest = false;
 					}
-					if ($isvalidrequest && (!isset($post['username']) || empty($post['username']))) {
-						$this->setError("Please enter username.");
+					if ($isvalidrequest && (!isset($post['password']) || empty($post['password']))) {
+						$this->setError("Please enter password.");
 						$isvalidrequest = false;
 					}
-					if($isvalidrequest && isset($_FILES['image']) && $_FILES['image']['name']){
-						$file_name = $_FILES['image']['name'];
-						$file_size = $_FILES['image']['size'];
-						$file_tmp = $_FILES['image']['tmp_name'];
-						$file_type = $_FILES['image']['type'];
-						$tmp = explode('.', $_FILES['image']['name']);
-						$file_ext = end($tmp);
-						$extensions = array("jpeg","jpg","png","JPEG","JPG","PNG");
-						if(in_array($file_ext,$extensions)=== false){
-							$errors = "extension not allowed, please choose a JPEG or PNG file.";
-						}
-						if($file_size > 2097152){
-							$errors = 'File size must be excately 2 MB';
-						}
-						if(empty($errors) == true){
-							$new_file_name = md5(uniqid(rand(),true));
-							move_uploaded_file($file_tmp,"assets/upload/".$new_file_name.'.'.$file_ext);
-							$post['image'] = "assets/upload/".$new_file_name.'.'.$file_ext;
-						} else {
-							$this->setError($errors);
-						}
-					}
-					if($isvalidrequest && isset($post['reference_code']) && !empty($post['reference_code'])){
-						$reference_by = $userModel->findByReferCode($post['reference_code']);
-						if($reference_by){
-							$post['refer_by'] = $reference_by['user_id'];
-							$userModel->update($reference_by['user_id'], array('refer_points' => $reference_by['refer_points']+1));
-						} else {
-							$this->setError("Wrong Reference Code.");
+
+					if($isvalidrequest){
+						// Check if phone already exists
+						$existingPhone = $userModel->where('phone', $post['phone'])->first();
+						if($existingPhone){
+							$this->setError('Phone number already registered.');
 							$isvalidrequest = false;
 						}
 					}
 					if($isvalidrequest){
-						$user = $userModel->where('username', $post['username'])->findAll();
-						if(count($user) < 1){
-							$created_at = date('Y-m-d H:i:s');
+						$created_at = date('Y-m-d H:i:s');
+						$values = array(
+						'full_name' => $post['full_name'],
+						'email' => $post['email'],
+						'phone' => $post['phone'],
+						'password' => password_hash($post['password'], PASSWORD_DEFAULT),
+						'role_id' => isset($post['role_id']) ? $post['role_id'] : 2, // Default role
+						'status' => isset($post['status']) ? $post['status'] : 1,
+						'language' => isset($post['language']) ? $post['language'] : 'en',
+						'profile_photo' => isset($post['profile_photo']) ? $post['profile_photo'] : '',
+						'created_by' => 0,
+						'created_at' => $created_at,
+						'updated_at' => $created_at
+						);
 
-							if($post['user_type_id'] == 2){
-								$national['admin_id'] = 1;
-							}if($post['user_type_id'] == 3){
-								$national = $userModel->find($post['parent_id']);
-							}if($post['user_type_id'] == 4){
-								$super = $userModel->find($post['parent_id']);
-								$national = $userModel->find($super['national_id']);
-							}if($post['user_type_id'] == 5){
-								$distributor = $userModel->find($post['parent_id']);
-								$super = $userModel->find($distributor['super_id']);
-								$national = $userModel->find($super['national_id']);
-							}
+						$user_id = $userModel->insert($values);
 
-							$values = array(
-							'name' => $post['name'],
-							'email' => $post['email'],
-							'phone' => $post['phone'],
-							'company' => $post['company'],
-							'gstin' => $post['gstin'],
-							'username' => $post['username'],
-							'password' => $post['password'],
-							'country_id' => $post['country_id'],
-							'state_id' => $post['state_id'],
-							'city_id' => $post['city_id'],
-							'address' => $post['address'],
-							'user_type_id' => $post['user_type_id'],
-							'status' => $post['status'],
-							'transtype' => 'keys',
-							'credit' => '1',
-							'viewer_id' => 0,
-							'image' => isset($post['image']) ? $post['image'] : '',
-							'language_id' => isset($post['language_id']) ? $post['language_id'] : '1',
-							'distributor_id' => isset($distributor['user_id']) ? $distributor['user_id'] : 0,
-							'super_id' => isset($super['user_id']) ? $super['user_id'] : 0,
-							'national_id' =>  isset($national['user_id']) ? $national['user_id'] : 0,
-							'admin_id' => isset($national['admin_id']) ? $national['admin_id'] : 0,
-							'refer_code' => generateReferralCode(),
-							'refer_by' => isset($post['refer_by']) ? $post['refer_by'] : 0,
-							'parent_id' => $post['parent_id'],
-							'code' => GetUserCode(),
-							'cvv' => rand(111,999),
-							'updated_by' => 0,
-							'updated_at' => $created_at,
-							'created_at' => $created_at,
-							'created_by' => 1
-							);
-
-							$user_id = $userModel->insert($values);
-
-							$this->setSuccess("Register successfully");
-
-						} else {
-							$this->setError('User name found use another');
+						if($user_id){
+							$this->setSuccess("Registration successful");
+							$this->setOutput(['user_id' => $user_id]);
+							} else {
+							$this->setError("Registration failed. Please try again.");
 						}
 					}
 					} else {
@@ -211,17 +177,25 @@
 					}
 					if ($isvalid) {
 						$userModel = new UserModel();
-						$member = $userModel->where('phone', $post['phone'])->first();
-						if ($member) {
-							$resetkey = rand(100000,900000);
-							$userModel->update($member['user_id'], array(
-							'resetpassword_token' => $resetkey,
-							'resetpassword_sent_at' => date('Y-m-d H:i:s')
+						$user = $userModel->where('phone', $post['phone'])->first();
+						if ($user) {
+							// Generate 6-digit OTP
+							$otp = rand(100000, 999999);
+							$otp_expiry = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+							$userModel->update($user['user_id'], array(
+							'otp' => $otp,
+							'otp_expiry' => $otp_expiry,
+							'otp_attempts' => 0,
+							'updated_at' => date('Y-m-d H:i:s')
 							));
-							$this->setSuccess("OTP for reset password");
-							$this->setOutput(array("otp"=>$resetkey));
+
+							// TODO: Send OTP via SMS
+
+							$this->setSuccess("OTP sent successfully for password reset");
+							$this->setOutput(array("otp" => $otp)); // Remove this in production
 							} else {
-							$this->setError("Phone no address not found.");
+							$this->setError("Phone number not found.");
 						}
 					}
 					} else {
@@ -248,32 +222,49 @@
 						$isvalid = false;
 					}
 					else if (!isset($post['otp']) || empty($post['otp'])) {
-						$this->setError("Please enter a otp.");
+						$this->setError("Please enter OTP.");
 						$isvalid = false;
 					}
 					else if ($isvalid  && strlen($post['otp']) != 6) {
-						$this->setError("Please enter a valid otp.");
+						$this->setError("Please enter a valid OTP.");
 						$isvalid = false;
-						}else if (!isset($post['new_password']) || empty($post['new_password'])) {
+					}
+					else if (!isset($post['new_password']) || empty($post['new_password'])) {
 						$this->setError("Please enter a new password.");
 						$isvalid = false;
 					}
+
 					if ($isvalid) {
 						$userModel = new UserModel();
-						$member = $userModel->where('phone', $post['phone'])->first();
-						if ($member) {
-							if ($member['resetpassword_token'] == $post['otp']) {
-								$userModel->update($member['user_id'], array(
-                                'resetpassword_token' => 0,
-                                'password' => password_hash($post['new_password'], PASSWORD_DEFAULT)
-								));
-								$this->setSuccess("Password reset done");
-								$this->setOutput();
+						$user = $userModel->where('phone', $post['phone'])->first();
+						if ($user) {
+							// Check if OTP is valid
+							if ($user['otp'] == $post['otp']) {
+								// Check if OTP has expired
+								$current_time = strtotime(date('Y-m-d H:i:s'));
+								$expiry_time = strtotime($user['otp_expiry']);
+
+								if ($current_time > $expiry_time) {
+									$this->setError("OTP has expired. Please request a new one.");
+									} else {
+									// Reset password
+									$userModel->update($user['user_id'], array(
+									'otp' => null,
+									'otp_expiry' => null,
+									'otp_attempts' => 0,
+									'password' => password_hash($post['new_password'], PASSWORD_DEFAULT),
+									'updated_at' => date('Y-m-d H:i:s')
+									));
+									$this->setSuccess("Password reset successful");
+								}
 								} else {
-								$this->setError("otp is wrong.");
+								// Increment OTP attempts
+								$attempts = $user['otp_attempts'] + 1;
+								$userModel->update($user['user_id'], array('otp_attempts' => $attempts));
+								$this->setError("Invalid OTP. Please try again.");
 							}
 							} else {
-							$this->setError("Phone no address not found.");
+							$this->setError("Phone number not found.");
 						}
 					}
 					} else {
@@ -290,23 +281,23 @@
 			if ($this->AuthenticateApikey()) {
 				if ($this->AuthenticateToken()) {
 					$userModel = new UserModel();
-					$member = $userModel->where('user_id', $this->_member['id'])->first();
-					if ($member) {
+					$user = $userModel->where('user_id', $this->_user['id'])->first();
+					if ($user) {
 						if ($this->isPost()) {
 							$post = $this->getPost();
 							$isvalid = true;
-							if (!isset($post['firebase_res_id']) || empty($post['firebase_res_id'])) {
-								$this->setError("Please enter your firebase_res_id.");
+							if (!isset($post['fcm_token']) || empty($post['fcm_token'])) {
+								$this->setError("Please enter FCM token.");
 								$isvalid = false;
 							}
 							if ($isvalid) {
-								$userModel->update($member['user_id'], array(
-								'firebase_res_id' => isset($post['firebase_res_id']) ? $post['firebase_res_id'] : '',
+								$userModel->update($user['user_id'], array(
+								'fcm_token' => $post['fcm_token'],
 								'updated_at' => date("Y-m-d H:i:s"),
 								));
-								$this->setSuccess("firebase Token Set");
+								$this->setSuccess("FCM token set successfully");
 							}
-							}  else {
+							} else {
 							$this->setError($this->methodNotAllowed);
 						}
 					}
@@ -325,13 +316,19 @@
 				if ($this->AuthenticateApikey()) {
 					if ($this->AuthenticateToken()) {
 						$userModel = new UserModel();
-						$userModel->update($this->_user['id'], array('firebase_res_id' => ''));
+						$userModel->update($this->_user['id'], array('fcm_token' => ''));
 						$sessionModel = new SessionModel();
-						$session = $sessionModel->findByID($this->_session['id']);
-						$sessionModel->update($this->_session['id'], array(
-                        'status' => 0,
-                        'logged_out' => date("Y-m-d H:i:s"),
-						));
+						if(isset($this->_session['session_id'])){
+							$sessionModel->update($this->_session['session_id'], array(
+								'status' => 0,
+								'logged_out' => date("Y-m-d H:i:s"),
+							));
+						}
+
+						// Record logout time in attendance
+						$attendanceModel = new UserAttendanceModel();
+						$attendanceModel->recordLogout($this->_user['id'], date('Y-m-d'));
+
 						$this->setSuccess('You have successfully logout');
 						$this->setOutput(json_decode("{}"));
 						} else {
@@ -350,72 +347,162 @@
 		{
 			if ($this->AuthenticateApikey()) {
 				if ($this->AuthenticateToken()) {
-					$errors = '';
 					$userModel = new UserModel();
 					if($this->isPost()){
 						$post = esc($this->getPost());
 						$isvalidrequest = true;
 						$errors = "";
-						if (!isset($post['name']) || empty($post['name'])) {
-							$this->setError("Please enter name.");
+
+						if (!isset($post['full_name']) || empty($post['full_name'])) {
+							$this->setError("Please enter full name.");
 							$isvalidrequest = false;
 						}
-						if($isvalidrequest && isset($_FILES['upiqrcode']) && $_FILES['upiqrcode']['name']){
-							$file_name = $_FILES['upiqrcode']['name'];
-							$file_size = $_FILES['upiqrcode']['size'];
-							$file_tmp = $_FILES['upiqrcode']['tmp_name'];
-							$file_type = $_FILES['upiqrcode']['type'];
-							$tmp = explode('.', $_FILES['upiqrcode']['name']);
+
+						// Handle profile photo upload
+						if($isvalidrequest && isset($_FILES['profile_photo']) && $_FILES['profile_photo']['name']){
+							$file_name = $_FILES['profile_photo']['name'];
+							$file_size = $_FILES['profile_photo']['size'];
+							$file_tmp = $_FILES['profile_photo']['tmp_name'];
+							$file_type = $_FILES['profile_photo']['type'];
+							$tmp = explode('.', $_FILES['profile_photo']['name']);
 							$file_ext = end($tmp);
 							$extensions = array("jpeg","jpg","png","JPEG","JPG","PNG");
-							if(in_array($file_ext,$extensions)=== false){
-								$errors = "extension not allowed, please choose a JPEG or PNG file.";
+
+							if(in_array($file_ext,$extensions) === false){
+								$errors = "Extension not allowed, please choose a JPEG or PNG file.";
 							}
 							if($file_size > 2097152){
-								$errors = 'File size must be excately 2 MB';
+								$errors = 'File size must be exactly 2 MB or less';
 							}
 							if(empty($errors) == true){
-								$new_file_name = md5(uniqid(rand(),true));
-								move_uploaded_file($file_tmp,"assets/upload/".$new_file_name.'.'.$file_ext);
-								$post['upiqrcode'] = "assets/upload/".$new_file_name.'.'.$file_ext;
+								// Use JWT for file naming instead of md5
+								$jwt = new JwtLib();
+								$new_file_name = bin2hex(random_bytes(16));
+								$upload_path = "assets/images/users/".$new_file_name.'.'.$file_ext;
+								move_uploaded_file($file_tmp, $upload_path);
+								$post['profile_photo'] = $upload_path;
 							}
 						}
+
 						if($isvalidrequest){
 							if($errors){
 								$this->setError($errors);
 							}
 							else{
-								$user = $userModel->findByID($this->_member['id']);
+								$user = $userModel->findByID($this->_user['id']);
 								$values = array(
-								'name' => $post['name'],
+								'full_name' => $post['full_name'],
 								'email' => isset($post['email']) ? $post['email'] : $user['email'],
-								'company' => isset($post['company']) ? $post['company'] : $user['company'],
-								'gstin' => isset($post['gstin']) ? $post['gstin'] : $user['gstin'],
-								'upi' => isset($post['upi']) ? $post['upi'] : $user['upi'],
-								'upiqrcode' => isset($post['upiqrcode']) ? $post['upiqrcode'] : $user['upiqrcode'],
-								'updated_by' => $this->_member['id'],
+								'phone' => isset($post['phone']) ? $post['phone'] : $user['phone'],
+								'language' => isset($post['language']) ? $post['language'] : $user['language'],
+								'profile_photo' => isset($post['profile_photo']) ? $post['profile_photo'] : $user['profile_photo'],
+								'updated_by' => $this->_user['id'],
 								'updated_at' => date("Y-m-d H:i:s")
 								);
 
-								$userModel->update($this->_member['id'], $values);
-								$this->setSuccess('Updated Successfully !!!');
-								//echo $userModel->getLastQuery()->getQuery(); exit();
+								$userModel->update($this->_user['id'], $values);
+								$this->setSuccess('Profile updated successfully');
+
+								// Return updated user data
+								$updatedUser = $userModel->findByID($this->_user['id']);
+								$this->setOutput($updatedUser);
 							}
 						}
 						} else {
-						$user = $userModel->findByID($this->_member['id']);
+						// GET request - return user profile
+						$user = $userModel->findByID($this->_user['id']);
 						if($user){
-							$this->setSuccess('Successfully !!!');
-							$user['upiqrcode'] = site_url().$user['upiqrcode'];
+							// Add full URL to profile photo if exists
+							if(!empty($user['profile_photo'])){
+								$user['profile_photo'] = site_url().$user['profile_photo'];
+							}
+							$this->setSuccess('Profile retrieved successfully');
 							$this->setOutput($user);
 							} else {
-							$this->setError('Error !!!!');
+							$this->setError('User not found');
 						}
 					}
 					} else {
 					$this->setError($this->invalidToken);
 				}
 				} else {
+				$this->setError($this->invalidApiKey);
+			}
+			return $this->response();
+		}
+
+		public function verify_otp()
+		{
+			if ($this->AuthenticateApikey()) {
+				if ($this->isPost()) {
+					$post = esc($this->getPost());
+					$isvalid = true;
+					if (!isset($post['phone']) || empty($post['phone'])) {
+						$isvalid = false;
+						$this->setError('Please enter your phone.');
+					}
+					else if (!isset($post['otp']) || empty($post['otp'])) {
+						$isvalid = false;
+						$this->setError('Please enter the OTP.');
+					}
+					if ($isvalid) {
+						$userModel = new UserModel();
+						$user = $userModel->where('phone', $post['phone'])->first();
+						if ($user && (int)$user['status'] === 1) {
+							// Validate OTP
+							if ($post['otp'] == $user['otp']) {
+								if (!empty($user['otp_expiry']) && strtotime($user['otp_expiry']) < time()) {
+									$this->setError('OTP expired. Please request a new OTP.');
+								} elseif (isset($user['otp_attempts']) && (int)$user['otp_attempts'] >= 3) {
+									$this->setError('OTP expired. Please request a new OTP.');
+								} else {
+									$jwt = new JwtLib();
+									$sessionToken = $jwt->generateToken(array('phone' => $user['phone']),$this->AppConfig->jwt_expiry);
+									$sessionModel = new SessionModel();
+									$sessionModel->insert(array(
+									'user_id' => $user['user_id'],
+									'session_token' => $sessionToken,
+									'status' => 1,
+									'logged_in' => date("Y-m-d H:i:s"),
+									));
+
+									$userModel->update($user['user_id'], array(
+										'otp' => '',
+										'otp_expiry' => '',
+										'otp_attempts' => 0,
+										'last_login_at' => date("Y-m-d H:i:s"),
+										'last_login_ip' => $this->request->getIPAddress(),
+									));
+
+									$sessionData = $this->sessionData($user);
+									$data = array();
+									$data[] = array(
+										'id' => $sessionData['id'],
+										'name' => $sessionData['name'],
+										'email' => $sessionData['email'],
+										'phone' => $sessionData['phone'],
+										'role_id' => $sessionData['role_id'],
+										'status' => $sessionData['status']
+									);
+									$this->setSuccess('Login Successfully');
+									$this->setOutput($sessionToken, 'sessionToken');
+									$this->setOutput(array('sessionData' => $data));
+								}
+							} else {
+								// Increment attempts on invalid OTP
+								$userModel->update($user['user_id'], array(
+									'otp_attempts' => isset($user['otp_attempts']) ? ((int)$user['otp_attempts'] + 1) : 1,
+								));
+								$this->setError('Invalid OTP.');
+							}
+						} else {
+							$this->setError('Invalid user or inactive status.');
+						}
+					}
+				} else {
+					$this->setError($this->methodNotAllowed);
+				}
+			} else {
 				$this->setError($this->invalidApiKey);
 			}
 			return $this->response();
