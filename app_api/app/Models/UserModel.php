@@ -27,6 +27,10 @@
 			$builder->select($this->table . '.*, roles.name as role');
 			$builder->join('user_roles as roles', 'roles.role_id = ' . $this->table . '.role_id', 'left');
 
+			if (isset($params['non_admin'])) {
+				$builder->where($this->table . '.role_id !=', 1);
+			}
+
 			if (isset($params['start_date']) && isset($params['end_date'])) {
 				$builder->where('DATE('.$this->table . '.created_at) >=', $params['start_date']);
 				$builder->where('DATE('.$this->table . '.created_at) <=', $params['end_date']);

@@ -1,0 +1,701 @@
+{
+	"info": {
+		"_postman_id": "44c4e320-bc43-4fe2-a82c-c9c9833cafb5",
+		"name": "PDS API Collection",
+		"description": "Complete API collection for PDS application with JWT authentication",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "6201010"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.environment.set(\"x-access-token\",pm.response.json().sessionToken)"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "phone",
+									"value": "8788786675",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "Admin@123",
+									"type": "text"
+								},
+								{
+									"key": "platform",
+									"value": "android",
+									"type": "text"
+								},
+								{
+									"key": "fcm_token",
+									"value": "firebase_fcm_token_here",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/login",
+						"description": "Login with phone and password. Returns JWT token and user session data."
+					},
+					"response": []
+				},
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "full_name",
+									"value": "John Doed",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "john.doe@example.com",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "1234567891",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "password123",
+									"type": "text"
+								},
+								{
+									"key": "role_id",
+									"value": "2",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/register",
+						"description": "Register a new user with required fields: full_name, email, phone, and password."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "phone",
+									"value": " 1234567890",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/resetpasswordrequest",
+						"description": "Request OTP for password reset. OTP is valid for 10 minutes."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "phone",
+									"value": "1234567890",
+									"type": "text"
+								},
+								{
+									"key": "otp",
+									"value": "123456",
+									"type": "text"
+								},
+								{
+									"key": "new_password",
+									"value": "newpassword123",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/resetpassword",
+						"description": "Reset password using OTP. OTP must be valid and not expired."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{base_url}}/auth/logout",
+						"description": "Logout user and invalidate session token. Records logout time in attendance."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{base_url}}/auth/profile",
+						"description": "Get current user profile information."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "full_name",
+									"value": "John Doe Updated",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "john.updated@example.com",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "1234567890",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"type": "text"
+								},
+								{
+									"key": "profile_photo",
+									"type": "file",
+									"src": [],
+									"disabled": true
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/profile",
+						"description": "Update user profile. Supports file upload for profile_photo (max 2MB, JPEG/PNG only)."
+					},
+					"response": []
+				},
+				{
+					"name": "Set FCM Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "fcm_token",
+									"value": "firebase_fcm_token_here",
+									"type": "text"
+								}
+							]
+						},
+						"url": "{{base_url}}/auth/set_firebase_res_id",
+						"description": "Set Firebase Cloud Messaging token for push notifications."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get Users List (Index)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-VERSION",
+								"value": "{{x-app-version}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-PLATFORM",
+								"value": "{{x-app-platform}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/index?page=1&per_page=25",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"index"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1",
+									"description": "Page number"
+								},
+								{
+									"key": "per_page",
+									"value": "25",
+									"description": "Records per page"
+								},
+								{
+									"key": "keywords",
+									"value": "",
+									"description": "Search in full_name, email, phone",
+									"disabled": true
+								},
+								{
+									"key": "start_date",
+									"value": "",
+									"description": "Start date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "end_date",
+									"value": "",
+									"description": "End date (YYYY-MM-DD)",
+									"disabled": true
+								},
+								{
+									"key": "role",
+									"value": "",
+									"description": "Filter by role_id",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"description": "Filter by status (0 or 1)",
+									"disabled": true
+								},
+								{
+									"key": "order_by_col",
+									"value": "",
+									"description": "Column to sort by",
+									"disabled": true
+								},
+								{
+									"key": "order_by",
+									"value": "",
+									"description": "Sort order (ASC or DESC)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get paginated list of users with search and filter options. Requires 'users-view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-VERSION",
+								"value": "{{x-app-version}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-PLATFORM",
+								"value": "{{x-app-platform}}",
+								"type": "text"
+							}
+						],
+						"url": "{{base_url}}/users/details/1",
+						"description": "Get detailed information of a specific user by ID. Replace '1' with actual user_id. Requires 'users-view' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Create New User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-VERSION",
+								"value": "{{x-app-version}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-PLATFORM",
+								"value": "{{x-app-platform}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "full_name",
+									"value": "John Doe",
+									"description": "Required: Full name of the user",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "johndoe@example.com",
+									"description": "Required: Unique email address",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "1234567890",
+									"description": "Required: Unique phone number",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "SecurePassword123",
+									"description": "Required: User password (will be hashed)",
+									"type": "text"
+								},
+								{
+									"key": "role_id",
+									"value": "2",
+									"description": "Required: Role ID for the user",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"description": "Optional: Status (1=active, 0=inactive), default: 1",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"description": "Optional: Language code (en, hi, etc.), default: en",
+									"type": "text"
+								},
+								{
+									"key": "code",
+									"value": "",
+									"description": "Optional: User code",
+									"type": "text"
+								},
+								{
+									"key": "fcm_token",
+									"value": "",
+									"description": "Optional: Firebase Cloud Messaging token",
+									"type": "text"
+								},
+								{
+									"key": "profile_photo",
+									"description": "Optional: Profile photo (JPEG, JPG, PNG)",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": "{{base_url}}/users/new",
+						"description": "Create a new user. All required fields must be provided. Requires 'users-create' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-VERSION",
+								"value": "{{x-app-version}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-PLATFORM",
+								"value": "{{x-app-platform}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "full_name",
+									"value": "John Doe Updated",
+									"description": "Optional: Full name to update",
+									"type": "text"
+								},
+								{
+									"key": "email",
+									"value": "johndoe.updated@example.com",
+									"description": "Optional: Email to update (must be unique)",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "9876543210",
+									"description": "Optional: Phone to update (must be unique)",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "NewPassword123",
+									"description": "Optional: New password (will be hashed)",
+									"type": "text"
+								},
+								{
+									"key": "role_id",
+									"value": "3",
+									"description": "Optional: Role ID to update",
+									"type": "text"
+								},
+								{
+									"key": "status",
+									"value": "1",
+									"description": "Optional: Status to update",
+									"type": "text"
+								},
+								{
+									"key": "language",
+									"value": "en",
+									"description": "Optional: Language to update",
+									"type": "text"
+								},
+								{
+									"key": "profile_photo",
+									"description": "Optional: New profile photo",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": "{{base_url}}/users/edit/1",
+						"description": "Update an existing user. Only provided fields will be updated. Replace '1' with actual user_id. Requires 'users-edit' permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-API-KEY",
+								"value": "{{api_key}}",
+								"type": "text"
+							},
+							{
+								"key": "X-ACCESS-TOKEN",
+								"value": "{{x-access-token}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-VERSION",
+								"value": "{{x-app-version}}",
+								"type": "text"
+							},
+							{
+								"key": "X-APP-PLATFORM",
+								"value": "{{x-app-platform}}",
+								"type": "text"
+							}
+						],
+						"url": "{{base_url}}/users/delete/1",
+						"description": "Soft delete a user (sets status to 0). Replace '1' with actual user_id. Cannot delete your own account. Requires 'users-delete' permission."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost/pds/app_api",
+			"type": "string"
+		},
+		{
+			"key": "api_key",
+			"value": "f3a7c1d92e4b5f89a0d3e6f7c2b8a4d1e9f5c6a8b7d0e3f2c1d9e4b5f8a7c0",
+			"type": "string"
+		},
+		{
+			"key": "session_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
