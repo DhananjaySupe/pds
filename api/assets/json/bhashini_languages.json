@@ -1,0 +1,23 @@
+[
+    {"code": "as", "language_en": "Assamese", "language_local": "অসমীয়া"},
+    {"code": "bn", "language_en": "Bengali", "language_local": "বাংলা"},
+    {"code": "brx", "language_en": "Bodo", "language_local": "बड़ो"},
+    {"code": "gom", "language_en": "Goan Konkani", "language_local": "कोंकणी"},
+    {"code": "gu", "language_en": "Gujarati", "language_local": "ગુજરાતી"},
+    {"code": "hi", "language_en": "Hindi", "language_local": "हिन्दी"},
+    {"code": "kn", "language_en": "Kannada", "language_local": "ಕನ್ನಡ"},
+    {"code": "ks", "language_en": "Kashmiri", "language_local": "कॉशुर"},
+    {"code": "mai", "language_en": "Maithili", "language_local": "मैथिली"},
+    {"code": "ml", "language_en": "Malayalam", "language_local": "മലയാളം"},
+    {"code": "mni", "language_en": "Manipuri", "language_local": "ꯃꯤꯇꯩꯂꯣꯟ"},
+    {"code": "mr", "language_en": "Marathi", "language_local": "मराठी"},
+    {"code": "ne", "language_en": "Nepali", "language_local": "नेपाली"},
+    {"code": "or", "language_en": "Odia", "language_local": "ଓଡ଼ିଆ"},
+    {"code": "pa", "language_en": "Punjabi", "language_local": "ਪੰਜਾਬੀ"},
+    {"code": "sa", "language_en": "Sanskrit", "language_local": "संस्कृतम्"},
+    {"code": "sd", "language_en": "Sindhi", "language_local": "سنڌي"},
+    {"code": "si", "language_en": "Sinhala", "language_local": "සිංහල"},
+    {"code": "ta", "language_en": "Tamil", "language_local": "தமிழ்"},
+    {"code": "te", "language_en": "Telugu", "language_local": "తెలుగు"},
+    {"code": "ur", "language_en": "Urdu", "language_local": "اردو"}
+]

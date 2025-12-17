@@ -16,5 +16,15 @@ application/logs/*
 !application/logs/index.html
 !application/logs/.htaccess
 
+
+# Dependencies
+vendor/
+node_modules/
+
+# Cache & logs
+*.log
+writable/
+cache/
+
 app_website/writable/*
 app_app/writable/*

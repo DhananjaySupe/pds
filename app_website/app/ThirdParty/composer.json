@@ -1,0 +1,9 @@
+{
+    "require": {
+        "aws/aws-sdk-php": "^3.135",
+        "mpdf/mpdf": "^8.0",
+        "firebase/php-jwt": "^6.11",
+		"phpoffice/phpspreadsheet": "^1.29",
+        "php-ffmpeg/php-ffmpeg": "^1.3"
+    }
+}
