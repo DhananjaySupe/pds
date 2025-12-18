@@ -12,6 +12,12 @@ $(document).ready(function () {
         ajax: {
             type: "POST",
             url: SITE_URL + "/users",
+            beforeSend: function () {
+                showLoader('.card-body', 'usersLoader');
+            },
+            complete: function () {
+                hideLoader('usersLoader');
+            },
             data: function (d) {
                 d.keywords = oFilter.keywords;
                 d.status = oFilter.status;

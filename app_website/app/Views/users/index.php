@@ -40,7 +40,7 @@
             </div>
         </div>
         <div class="card">
-            <div class="card-body">
+            <div class="card-body min-height-card-body">
                 <div class="table-responsive">
                     <table id="users-grid" class="table dt-responsive w-100 align-middle table-striped">
                         <thead class="table-light">

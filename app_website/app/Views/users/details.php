@@ -28,6 +28,7 @@
             <?php endif; ?>
 
             <?php $userTypeOptions = isset($userTypeOptions) ? $userTypeOptions : array(); ?>
+            <?php $godownOptions = isset($godownOptions) ? $godownOptions : array(); ?>
             <form class="needs-validation" novalidate method="post" action="<?= site_url('users/'.($formdata['mode'] == 'new' ? 'new' : 'edit/'.$formdata['id'])) ?>" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <div class="row align-items-stretch">
@@ -71,7 +72,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold required">User Type</label>
-                                        <select class="form-select" name="user_type_id" required>
+                                        <select class="form-select" id="userTypeSelect" name="user_type_id" required>
                                             <option value="">Select user type</option>
                                             <?php foreach($userTypeOptions as $type): ?>
                                                 <option value="<?= $type['user_type_id'] ?>" <?= (string)$formdata['user_type_id'] === (string)$type['user_type_id'] ? 'selected' : '' ?>><?= esc($type['type_name']) ?></option>
@@ -101,6 +102,97 @@
                                         <?php endif; ?>
                                         <small class="text-muted d-block mt-1">Use at least 8 characters with uppercase, lowercase, number and special character.</small>
                                     </div>
+
+                                    <!-- Extra details for Vendor/Godown/Shop -->
+                                    <div class="col-12">
+                                        <div id="extraDetailsWrapper" class="border rounded p-3 mt-2 d-none">
+                                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                                <h6 class="mb-0">Additional Details</h6>
+                                                <span class="text-muted small">Shown for Vendor / Godown / Shop users</span>
+                                            </div>
+
+                                            <!-- Vendor -->
+                                            <div id="vendorDetails" class="extra-details d-none">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold required">Company Name</label>
+                                                        <input type="text" class="form-control" name="company_name" value="<?= esc($formdata['company_name'] ?? '') ?>" placeholder="Enter company name">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">GST Number</label>
+                                                        <input type="text" class="form-control" name="gst_number" value="<?= esc($formdata['gst_number'] ?? '') ?>" placeholder="Enter GST number">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">PAN Number</label>
+                                                        <input type="text" class="form-control" name="pan_number" value="<?= esc($formdata['pan_number'] ?? '') ?>" placeholder="Enter PAN number">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Rating</label>
+                                                        <input type="number" class="form-control" name="rating" value="<?= esc($formdata['rating'] ?? '') ?>" min="0" max="5" step="0.1" placeholder="0 - 5">
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label fw-semibold">Bank Account Details</label>
+                                                        <textarea class="form-control" name="bank_account_details" rows="2" placeholder="Enter bank details"><?= esc($formdata['bank_account_details'] ?? '') ?></textarea>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label fw-semibold">Payment Terms</label>
+                                                        <textarea class="form-control" name="payment_terms" rows="2" placeholder="Enter payment terms"><?= esc($formdata['payment_terms'] ?? '') ?></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Godown -->
+                                            <div id="godownDetails" class="extra-details d-none">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold required">Godown Name</label>
+                                                        <input type="text" class="form-control" name="godown_name" value="<?= esc($formdata['godown_name'] ?? '') ?>" placeholder="Enter godown name">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Capacity (sqft)</label>
+                                                        <input type="number" class="form-control" name="capacity_sqft" value="<?= esc($formdata['capacity_sqft'] ?? '') ?>" min="0" step="1" placeholder="Enter capacity">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Location</label>
+                                                        <input type="text" class="form-control" name="godown_location" value="<?= esc($formdata['godown_location'] ?? '') ?>" placeholder="Enter location">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Contact Person</label>
+                                                        <input type="text" class="form-control" name="godown_contact_person" value="<?= esc($formdata['godown_contact_person'] ?? '') ?>" placeholder="Enter contact person">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Shop -->
+                                            <div id="shopDetails" class="extra-details d-none">
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold required">Shop Name</label>
+                                                        <input type="text" class="form-control" name="shop_name" value="<?= esc($formdata['shop_name'] ?? '') ?>" placeholder="Enter shop name">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold required">Godown</label>
+                                                        <select class="form-select" name="shop_godown_id">
+                                                            <option value="">Select godown</option>
+                                                            <?php foreach($godownOptions as $g): ?>
+                                                                <option value="<?= $g['godown_id'] ?>" <?= (string)($formdata['shop_godown_id'] ?? '') === (string)$g['godown_id'] ? 'selected' : '' ?>>
+                                                                    <?= esc($g['godown_name']) ?>
+                                                                </option>
+                                                            <?php endforeach; ?>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Location</label>
+                                                        <input type="text" class="form-control" name="shop_location" value="<?= esc($formdata['shop_location'] ?? '') ?>" placeholder="Enter location">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Contact Person</label>
+                                                        <input type="text" class="form-control" name="shop_contact_person" value="<?= esc($formdata['shop_contact_person'] ?? '') ?>" placeholder="Enter contact person">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -127,7 +219,7 @@
                 </div>
                 <div class="text-end mt-3">
                     <a href="<?= site_url('users'); ?>" class="btn btn-danger">Cancel</a>
-                    <button type="submit" class="btn btn-primary"><?= $formdata['mode'] == 'new' ? 'Create User' : 'Update User' ?></button>
+                    <button type="submit" class="btn btn-primary" data-loading="Saving..." ><?= $formdata['mode'] == 'new' ? 'Create User' : 'Update User' ?></button>
                 </div>
             </form>
         </div>
@@ -146,6 +238,55 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        function setSectionEnabled(section, enabled) {
+            if (!section) return;
+            section.querySelectorAll('input, select, textarea').forEach(function (el) {
+                el.disabled = !enabled;
+            });
+        }
+
+        function updateExtraDetailsUI() {
+            var userTypeSelect = document.getElementById('userTypeSelect');
+            var wrapper = document.getElementById('extraDetailsWrapper');
+            var vendor = document.getElementById('vendorDetails');
+            var godown = document.getElementById('godownDetails');
+            var shop = document.getElementById('shopDetails');
+
+            if (!userTypeSelect || !wrapper) return;
+
+            var type = (userTypeSelect.value || '').toString();
+            var showWrapper = (type === '3' || type === '4' || type === '5');
+
+            wrapper.classList.toggle('d-none', !showWrapper);
+
+            // Hide all
+            if (vendor) vendor.classList.add('d-none');
+            if (godown) godown.classList.add('d-none');
+            if (shop) shop.classList.add('d-none');
+
+            // Disable all inputs by default to avoid posting irrelevant fields
+            setSectionEnabled(vendor, false);
+            setSectionEnabled(godown, false);
+            setSectionEnabled(shop, false);
+
+            if (type === '3') {
+                vendor.classList.remove('d-none');
+                setSectionEnabled(vendor, true);
+            } else if (type === '4') {
+                godown.classList.remove('d-none');
+                setSectionEnabled(godown, true);
+            } else if (type === '5') {
+                shop.classList.remove('d-none');
+                setSectionEnabled(shop, true);
+            }
+        }
+
+        var userTypeSelect = document.getElementById('userTypeSelect');
+        if (userTypeSelect) {
+            userTypeSelect.addEventListener('change', updateExtraDetailsUI);
+        }
+        updateExtraDetailsUI();
+
         document.querySelectorAll('.toggle-password').forEach(function (button) {
             button.addEventListener('click', function () {
                 var targetId = this.getAttribute('data-target');

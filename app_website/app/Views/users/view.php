@@ -6,6 +6,10 @@
     $statusClass = 'bg-secondary-subtle text-muted';
     $statusClass = $user['status'] == '1' ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-muted';
     $userImageConstraints = 'max-width: 220px; max-height: 220px; object-fit: cover;';
+    $vendorDetails = $vendorDetails ?? null;
+    $godownList = $godownList ?? array();
+    $shopList = $shopList ?? array();
+    $userTypeId = (int) ($user['user_type_id'] ?? 0);
 ?>
 
 <div class="page-content">
@@ -96,6 +100,94 @@
                                 </div>
                                 <?php endif; ?>
                             </div>
+
+                            <?php if(in_array($userTypeId, array(3, 4, 5), true)): ?>
+                                <hr class="my-4">
+                                <h6 class="mb-3">Additional Details</h6>
+
+                                <?php if($userTypeId === 3): ?>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <p class="text-muted mb-1">Company Name</p>
+                                            <h6><?= !empty($vendorDetails['company_name']) ? esc($vendorDetails['company_name']) : '—' ?></h6>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="text-muted mb-1">GST Number</p>
+                                            <h6><?= !empty($vendorDetails['gst_number']) ? esc($vendorDetails['gst_number']) : '—' ?></h6>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="text-muted mb-1">PAN Number</p>
+                                            <h6><?= !empty($vendorDetails['pan_number']) ? esc($vendorDetails['pan_number']) : '—' ?></h6>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="text-muted mb-1">Rating</p>
+                                            <h6><?= (isset($vendorDetails['rating']) && $vendorDetails['rating'] !== '' && $vendorDetails['rating'] !== null) ? esc($vendorDetails['rating']) : '—' ?></h6>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="text-muted mb-1">Bank Account Details</p>
+                                            <h6 class="mb-0"><?= !empty($vendorDetails['bank_account_details']) ? nl2br(esc($vendorDetails['bank_account_details'])) : '—' ?></h6>
+                                        </div>
+                                        <div class="col-12">
+                                            <p class="text-muted mb-1">Payment Terms</p>
+                                            <h6 class="mb-0"><?= !empty($vendorDetails['payment_terms']) ? nl2br(esc($vendorDetails['payment_terms'])) : '—' ?></h6>
+                                        </div>
+                                    </div>
+                                <?php elseif($userTypeId === 4): ?>
+                                    <?php if(!empty($godownList)): ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Godown Name</th>
+                                                        <th>Location</th>
+                                                        <th>Capacity (sqft)</th>
+                                                        <th>Contact Person</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach($godownList as $g): ?>
+                                                        <tr>
+                                                            <td><?= esc($g['godown_name'] ?? '') ?></td>
+                                                            <td><?= esc($g['location'] ?? '') ?></td>
+                                                            <td><?= esc($g['capacity_sqft'] ?? '') ?></td>
+                                                            <td><?= esc($g['contact_person'] ?? '') ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="text-muted mb-0">—</p>
+                                    <?php endif; ?>
+                                <?php elseif($userTypeId === 5): ?>
+                                    <?php if(!empty($shopList)): ?>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle mb-0">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Shop Name</th>
+                                                        <th>Godown</th>
+                                                        <th>Location</th>
+                                                        <th>Contact Person</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach($shopList as $s): ?>
+                                                        <tr>
+                                                            <td><?= esc($s['shop_name'] ?? '') ?></td>
+                                                            <td><?= esc($s['godown_name'] ?? '') ?></td>
+                                                            <td><?= esc($s['location'] ?? '') ?></td>
+                                                            <td><?= esc($s['contact_person'] ?? '') ?></td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    <?php else: ?>
+                                        <p class="text-muted mb-0">—</p>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,9 @@
 
 	use App\Models\UserModel;
 	use App\Models\UserTypeModel;
+	use App\Models\VendorModel;
+	use App\Models\GodownModel;
+	use App\Models\ShopModel;
 	use App\Libraries\ExcelExporter;
 
 	class Users extends BaseController
@@ -186,6 +189,7 @@
 			if ($this->isPost()) {
 				$post = esc($this->getPost());
 				$isvalidrequest = true;
+				$userTypeId = isset($post['user_type_id']) ? (int) $post['user_type_id'] : 0;
 
 				if (!isset($post['full_name']) || empty($post['full_name'])) {
 					$error = "Please enter full name.";
@@ -220,6 +224,36 @@
 					$isvalidrequest = false;
 				}
 
+				// Extra details validation based on user type
+				if ($isvalidrequest && in_array($userTypeId, array(3, 4, 5), true)) {
+					if ($userTypeId === 3) {
+						if (!isset($post['company_name']) || trim($post['company_name']) === '') {
+							$error = "Please enter company name.";
+							$isvalidrequest = false;
+						}
+					} elseif ($userTypeId === 4) {
+						if (!isset($post['godown_name']) || trim($post['godown_name']) === '') {
+							$error = "Please enter godown name.";
+							$isvalidrequest = false;
+						}
+					} elseif ($userTypeId === 5) {
+						if (!isset($post['shop_name']) || trim($post['shop_name']) === '') {
+							$error = "Please enter shop name.";
+							$isvalidrequest = false;
+						} elseif (!isset($post['shop_godown_id']) || (string) $post['shop_godown_id'] === '') {
+							$error = "Please select godown for shop.";
+							$isvalidrequest = false;
+						} else {
+							$godownId = (int) $post['shop_godown_id'];
+							$godownModel = new GodownModel();
+							if (!$godownModel->find($godownId)) {
+								$error = "Selected godown is invalid.";
+								$isvalidrequest = false;
+							}
+						}
+					}
+				}
+
 				if ($isvalidrequest) {
 					$userModel = new UserModel();
 					$existingUser = $userModel->where('email', $post['email'])->first();
@@ -251,6 +285,39 @@
 						));
 
 						if ($user_id > 0) {
+							// Save extra details based on user type
+							if ($userTypeId === 3) {
+								$vendorModel = new VendorModel();
+								$vendorModel->insert(array(
+									'user_id' => $user_id,
+									'company_name' => trim($post['company_name'] ?? ''),
+									'gst_number' => trim($post['gst_number'] ?? ''),
+									'pan_number' => trim($post['pan_number'] ?? ''),
+									'bank_account_details' => trim($post['bank_account_details'] ?? ''),
+									'payment_terms' => trim($post['payment_terms'] ?? ''),
+									'rating' => (isset($post['rating']) && $post['rating'] !== '') ? $post['rating'] : null,
+								));
+							} elseif ($userTypeId === 4) {
+								$godownModel = new GodownModel();
+								$godownModel->insert(array(
+									'user_id' => $user_id,
+									'godown_name' => trim($post['godown_name'] ?? ''),
+									'location' => trim($post['godown_location'] ?? ''),
+									'capacity_sqft' => (isset($post['capacity_sqft']) && $post['capacity_sqft'] !== '') ? (int) $post['capacity_sqft'] : 0,
+									'contact_person' => trim($post['godown_contact_person'] ?? ''),
+									'is_active' => 1,
+								));
+							} elseif ($userTypeId === 5) {
+								$shopModel = new ShopModel();
+								$shopModel->insert(array(
+									'user_id' => $user_id,
+									'shop_name' => trim($post['shop_name'] ?? ''),
+									'location' => trim($post['shop_location'] ?? ''),
+									'contact_person' => trim($post['shop_contact_person'] ?? ''),
+									'godown_id' => (int) ($post['shop_godown_id'] ?? 0),
+									'is_active' => 1,
+								));
+							}
 							return redirect()->to('users/view/'.$user_id);
 						} else {
 							$error = 'Error creating user. Please try again.';
@@ -270,11 +337,33 @@
 				'user_type_id' => isset($post['user_type_id']) ? $post['user_type_id'] : '',
 				'language' => isset($post['language']) ? $post['language'] : 'en',
 				'profile_photo' => '',
+
+				// Vendor fields
+				'company_name' => isset($post['company_name']) ? $post['company_name'] : '',
+				'gst_number' => isset($post['gst_number']) ? $post['gst_number'] : '',
+				'pan_number' => isset($post['pan_number']) ? $post['pan_number'] : '',
+				'bank_account_details' => isset($post['bank_account_details']) ? $post['bank_account_details'] : '',
+				'payment_terms' => isset($post['payment_terms']) ? $post['payment_terms'] : '',
+				'rating' => isset($post['rating']) ? $post['rating'] : '',
+
+				// Godown fields
+				'godown_name' => isset($post['godown_name']) ? $post['godown_name'] : '',
+				'godown_location' => isset($post['godown_location']) ? $post['godown_location'] : '',
+				'capacity_sqft' => isset($post['capacity_sqft']) ? $post['capacity_sqft'] : '',
+				'godown_contact_person' => isset($post['godown_contact_person']) ? $post['godown_contact_person'] : '',
+
+				// Shop fields
+				'shop_name' => isset($post['shop_name']) ? $post['shop_name'] : '',
+				'shop_location' => isset($post['shop_location']) ? $post['shop_location'] : '',
+				'shop_contact_person' => isset($post['shop_contact_person']) ? $post['shop_contact_person'] : '',
+				'shop_godown_id' => isset($post['shop_godown_id']) ? $post['shop_godown_id'] : '',
 			);
 
 			$this->setData('formdata', $formdata);
 			$this->setData('statusOptions', $this->getStatusOptions());
 			$this->setData('userTypeOptions', $this->getUserTypeOptions());
+			$godownModel = new GodownModel();
+			$this->setData('godownOptions', $godownModel->getActiveGodowns());
 			$this->pageTitle('Add User');
 			return view('users/details', $this->viewdata);
 		}
@@ -291,11 +380,23 @@
 				throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
 			}
 
+			// Load existing extra details for prefilling
+			$vendorModel = new VendorModel();
+			$godownModel = new GodownModel();
+			$shopModel = new ShopModel();
+
+			$vendorDetails = $vendorModel->findByUserID($id);
+			$godownList = $godownModel->findByUserID($id);
+			$godownDetails = !empty($godownList) ? $godownList[0] : null;
+			$shopList = $shopModel->findByUserID($id);
+			$shopDetails = !empty($shopList) ? $shopList[0] : null;
+
 			$error = '';
 			$post = array();
 			if ($this->isPost()) {
 				$post = esc($this->getPost());
 				$isvalidrequest = true;
+				$userTypeId = isset($post['user_type_id']) ? (int) $post['user_type_id'] : (int) ($user['user_type_id'] ?? 0);
 
 				if (!isset($post['full_name']) || empty($post['full_name'])) {
 					$error = "Please enter full name.";
@@ -333,6 +434,35 @@
 					$isvalidrequest = false;
 				}
 
+				// Extra details validation based on user type
+				if ($isvalidrequest && in_array($userTypeId, array(3, 4, 5), true)) {
+					if ($userTypeId === 3) {
+						if (!isset($post['company_name']) || trim($post['company_name']) === '') {
+							$error = "Please enter company name.";
+							$isvalidrequest = false;
+						}
+					} elseif ($userTypeId === 4) {
+						if (!isset($post['godown_name']) || trim($post['godown_name']) === '') {
+							$error = "Please enter godown name.";
+							$isvalidrequest = false;
+						}
+					} elseif ($userTypeId === 5) {
+						if (!isset($post['shop_name']) || trim($post['shop_name']) === '') {
+							$error = "Please enter shop name.";
+							$isvalidrequest = false;
+						} elseif (!isset($post['shop_godown_id']) || (string) $post['shop_godown_id'] === '') {
+							$error = "Please select godown for shop.";
+							$isvalidrequest = false;
+						} else {
+							$godownId = (int) $post['shop_godown_id'];
+							if (!$godownModel->find($godownId)) {
+								$error = "Selected godown is invalid.";
+								$isvalidrequest = false;
+							}
+						}
+					}
+				}
+
 				if ($isvalidrequest && !$this->isValidUserType($post['user_type_id'])) {
 					$error = "Selected user type is invalid.";
 					$isvalidrequest = false;
@@ -363,6 +493,54 @@
 					if ($isvalidrequest) {
 						$result = $userModel->update($id, $updateData);
 						if ($result) {
+							// Save extra details based on user type
+							if ($userTypeId === 3) {
+								$existingVendor = $vendorModel->where('user_id', $id)->first();
+								$vendorData = array(
+									'user_id' => $id,
+									'company_name' => trim($post['company_name'] ?? ''),
+									'gst_number' => trim($post['gst_number'] ?? ''),
+									'pan_number' => trim($post['pan_number'] ?? ''),
+									'bank_account_details' => trim($post['bank_account_details'] ?? ''),
+									'payment_terms' => trim($post['payment_terms'] ?? ''),
+									'rating' => (isset($post['rating']) && $post['rating'] !== '') ? $post['rating'] : null,
+								);
+								if ($existingVendor && isset($existingVendor['vendor_id'])) {
+									$vendorModel->update($existingVendor['vendor_id'], $vendorData);
+								} else {
+									$vendorModel->insert($vendorData);
+								}
+							} elseif ($userTypeId === 4) {
+								$existingGodown = $godownModel->where('user_id', $id)->orderBy('godown_id', 'DESC')->first();
+								$godownData = array(
+									'user_id' => $id,
+									'godown_name' => trim($post['godown_name'] ?? ''),
+									'location' => trim($post['godown_location'] ?? ''),
+									'capacity_sqft' => (isset($post['capacity_sqft']) && $post['capacity_sqft'] !== '') ? (int) $post['capacity_sqft'] : 0,
+									'contact_person' => trim($post['godown_contact_person'] ?? ''),
+									'is_active' => 1,
+								);
+								if ($existingGodown && isset($existingGodown['godown_id'])) {
+									$godownModel->update($existingGodown['godown_id'], $godownData);
+								} else {
+									$godownModel->insert($godownData);
+								}
+							} elseif ($userTypeId === 5) {
+								$existingShop = $shopModel->where('user_id', $id)->orderBy('shop_id', 'DESC')->first();
+								$shopData = array(
+									'user_id' => $id,
+									'shop_name' => trim($post['shop_name'] ?? ''),
+									'location' => trim($post['shop_location'] ?? ''),
+									'contact_person' => trim($post['shop_contact_person'] ?? ''),
+									'godown_id' => (int) ($post['shop_godown_id'] ?? 0),
+									'is_active' => 1,
+								);
+								if ($existingShop && isset($existingShop['shop_id'])) {
+									$shopModel->update($existingShop['shop_id'], $shopData);
+								} else {
+									$shopModel->insert($shopData);
+								}
+							}
 							return redirect()->to('users/view/'.$id);
 						} else {
 							$error = 'Error updating user. Please try again.';
@@ -382,11 +560,32 @@
 				'user_type_id' => isset($post['user_type_id']) ? $post['user_type_id'] : $user['user_type_id'],
 				'language' => isset($post['language']) ? $post['language'] : ($user['language'] ?? 'en'),
 				'profile_photo' => $user['profile_photo'] ?? '',
+
+				// Vendor fields
+				'company_name' => isset($post['company_name']) ? $post['company_name'] : ($vendorDetails['company_name'] ?? ''),
+				'gst_number' => isset($post['gst_number']) ? $post['gst_number'] : ($vendorDetails['gst_number'] ?? ''),
+				'pan_number' => isset($post['pan_number']) ? $post['pan_number'] : ($vendorDetails['pan_number'] ?? ''),
+				'bank_account_details' => isset($post['bank_account_details']) ? $post['bank_account_details'] : ($vendorDetails['bank_account_details'] ?? ''),
+				'payment_terms' => isset($post['payment_terms']) ? $post['payment_terms'] : ($vendorDetails['payment_terms'] ?? ''),
+				'rating' => isset($post['rating']) ? $post['rating'] : ($vendorDetails['rating'] ?? ''),
+
+				// Godown fields (first active record)
+				'godown_name' => isset($post['godown_name']) ? $post['godown_name'] : ($godownDetails['godown_name'] ?? ''),
+				'godown_location' => isset($post['godown_location']) ? $post['godown_location'] : ($godownDetails['location'] ?? ''),
+				'capacity_sqft' => isset($post['capacity_sqft']) ? $post['capacity_sqft'] : ($godownDetails['capacity_sqft'] ?? ''),
+				'godown_contact_person' => isset($post['godown_contact_person']) ? $post['godown_contact_person'] : ($godownDetails['contact_person'] ?? ''),
+
+				// Shop fields (first active record)
+				'shop_name' => isset($post['shop_name']) ? $post['shop_name'] : ($shopDetails['shop_name'] ?? ''),
+				'shop_location' => isset($post['shop_location']) ? $post['shop_location'] : ($shopDetails['location'] ?? ''),
+				'shop_contact_person' => isset($post['shop_contact_person']) ? $post['shop_contact_person'] : ($shopDetails['contact_person'] ?? ''),
+				'shop_godown_id' => isset($post['shop_godown_id']) ? $post['shop_godown_id'] : ($shopDetails['godown_id'] ?? ''),
 			);
 
 			$this->setData('formdata', $formdata);
 			$this->setData('statusOptions', $this->getStatusOptions());
 			$this->setData('userTypeOptions', $this->getUserTypeOptions());
+			$this->setData('godownOptions', $godownModel->getActiveGodowns());
 			$this->pageTitle('Edit User');
 			return view('users/details', $this->viewdata);
 		}
@@ -403,7 +602,26 @@
 				throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
 			}
 
+			$userTypeId = (int) ($user['user_type_id'] ?? 0);
+			$vendorDetails = null;
+			$godownList = array();
+			$shopList = array();
+
+			if ($userTypeId === 3) {
+				$vendorModel = new VendorModel();
+				$vendorDetails = $vendorModel->findByUserID($id);
+			} elseif ($userTypeId === 4) {
+				$godownModel = new GodownModel();
+				$godownList = $godownModel->findByUserID($id);
+			} elseif ($userTypeId === 5) {
+				$shopModel = new ShopModel();
+				$shopList = $shopModel->findByUserID($id);
+			}
+
 			$this->setData('user', $user);
+			$this->setData('vendorDetails', $vendorDetails);
+			$this->setData('godownList', $godownList);
+			$this->setData('shopList', $shopList);
 			$this->setData('statusOptions', $this->getStatusOptions());
 			$this->pageTitle('View User Details');
 			return view('users/view', $this->viewdata);

@@ -423,3 +423,132 @@
     }
 }
 /* End of Audio Recorder Styles */
+
+.min-height-card-body{
+    min-height: 500px;
+}
+/** Loader Starts Here */
+.preloader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    background: rgba(255, 255, 255, 0.4);
+    display: table;
+    text-align: center;
+    z-index: 9;
+}
+
+.preloader.fill {
+    background: rgba(255, 255, 255, 1);
+}
+
+.loader {
+    display: table-cell;
+    vertical-align: middle;
+    position: relative;
+}
+
+.loader-icon {
+    width: 48px;
+    height: 48px;
+    border: 6px solid #0052ec;
+    border-right-color: #eee;
+    border-radius: 50%;
+    position: relative;
+    animation: loader-rotate 1s linear infinite;
+    margin: 0 auto;
+    margin-left: calc(50% - 48px);
+    margin-bottom: 48px;
+}
+
+div.dataTables_wrapper div.dataTables_processing .loader {
+    display: inline-block;
+}
+
+@keyframes loader-rotate {
+    0% {
+        transform: rotate(0)
+	}
+
+    100% {
+        transform: rotate(360deg)
+	}
+}
+
+@-webkit-keyframes spinner-border {
+    to {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+	}
+}
+
+@keyframes spinner-border {
+    to {
+        -webkit-transform: rotate(360deg);
+        transform: rotate(360deg);
+	}
+}
+
+.spinner-border {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    vertical-align: text-bottom;
+    border: 0.15em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    -webkit-animation: spinner-border .75s linear infinite;
+    animation: spinner-border .75s linear infinite;
+}
+
+.spinner-border-sm {
+    width: 1.125rem;
+    height: 1.125rem;
+    border-width: 0.15em;
+}
+
+@-webkit-keyframes spinner-grow {
+    0% {
+        -webkit-transform: scale(0);
+        transform: scale(0);
+	}
+
+    50% {
+        opacity: 1;
+	}
+}
+
+@keyframes spinner-grow {
+    0% {
+        -webkit-transform: scale(0);
+        transform: scale(0);
+	}
+
+    50% {
+        opacity: 1;
+	}
+}
+
+.spinner-grow {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    vertical-align: text-bottom;
+    background-color: currentColor;
+    border-radius: 50%;
+    opacity: 0;
+    -webkit-animation: spinner-grow .75s linear infinite;
+    animation: spinner-grow .75s linear infinite;
+}
+
+.spinner-grow-sm {
+    width: 1rem;
+    height: 1rem;
+}
+
+/** Loader Ends Here */

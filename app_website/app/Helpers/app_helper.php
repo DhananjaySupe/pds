@@ -74,7 +74,9 @@
 			$AppConfig = new \Config\AppConfig();
 			$scripts = $AppConfig->defaultJS;
 			if ($js && count($js) > 0) {
-				array_splice($scripts, count($scripts) - 1, 0, $js);
+				// Append page-level scripts at the end so global helpers (e.g. showLoader/hideLoader in script.js)
+				// are defined before any page scripts execute.
+				$scripts = array_merge($scripts, $js);
 			}
 			$sitescripts = '';
 			if ($scripts && count($scripts) > 0) {
