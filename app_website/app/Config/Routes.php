@@ -31,3 +31,13 @@ $routes->add('/logout', 'Auth::logout');
 $routes->add('/welcome/(:any)', 'Auth::welcome/$1');
 $routes->add('/verify-otp/(:any)', 'Auth::verifyOtp/$1');
 $routes->add('/profile', 'Auth::profile');
+
+
+$routes->group('users', function($routes) {
+	$routes->add('/', 'Users::index');
+	$routes->get('export', 'Users::export');
+	$routes->add('new', 'Users::new');
+	$routes->add('edit/(:num)', 'Users::edit/$1');
+	$routes->add('delete/(:num)', 'Users::delete/$1');
+	$routes->add('view/(:num)', 'Users::view/$1');
+});

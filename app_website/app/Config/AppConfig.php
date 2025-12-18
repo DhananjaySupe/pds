@@ -27,6 +27,14 @@
         'thumb' => array(340, 255),
 		);
 
+		public $S3 = array(
+			'enabled' => false,
+			'key' => '',
+			'secret' => '',
+			'bucket' => '',
+			'region' => '',
+		);
+
 		public $twoFactorAuth = array(
 			'enabled' => false,
 			'send' => array(

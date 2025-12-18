@@ -220,7 +220,7 @@
 										<img class="rounded-circle header-profile-user" src="<?= site_url('assets/images/users/user.jpg'); ?>" alt="Header Avatar">
 										<span class="text-start ms-xl-2">
 											<span class="d-none d-xl-inline-block ms-1 fw-medium user-name-text"><?= $_user['name']; ?></span>
-											<span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text"><?= $_user['role']; ?></span>
+											<span class="d-none d-xl-block ms-1 fs-12 user-name-sub-text"><?= $_user['user_type']; ?></span>
 										</span>
 									</span>
 								</button>
@@ -320,8 +320,12 @@
 									<i class="ri-dashboard-2-line"></i> <span data-key="t-dashboards">Dashboard</span>
 								</a>
 							</li>
-							<li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">People</span></li>
 							<li class="nav-item">
+								<a class="nav-link menu-link" href="<?= site_url('users'); ?>">
+									<i class="ri-user-line"></i> <span data-key="t-users">Users</span>
+								</a>
+							</li>
+							<!--<li class="nav-item">
 								<a class="nav-link menu-link" href="#sidebarLosts" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLosts">
 									<i class="ri-honour-line"></i>
 									<span data-key="t-losts">Lost</span>
@@ -331,102 +335,9 @@
 										<li class="nav-item">
 											<a href="<?= site_url('lost-people'); ?>" class="nav-link" data-key="t-search">Search </a>
 										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('lost-people/new'); ?>" class="nav-link" data-key="t-new">New</a>
-										</li>
 									</ul>
 								</div>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="#sidebarFound" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarFound">
-									<i class="ri-honour-line"></i>
-									<span data-key="t-found">Found</span>
-								</a>
-								<div class="collapse menu-dropdown" id="sidebarFound">
-									<ul class="nav nav-sm flex-column">
-										<li class="nav-item">
-											<a href="<?= site_url('found-people'); ?>" class="nav-link" data-key="t-search">Search </a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('found-people/new'); ?>" class="nav-link" data-key="t-new">New</a>
-										</li>
-									</ul>
-								</div>
-							</li>
-							<li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">Reunion</span></li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="<?= site_url('reunite'); ?>">
-									<i class="ri-heart-line"></i> <span data-key="t-reunite">Reunite</span>
-								</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="<?= site_url('handover'); ?>">
-									<i class="ri-hand-heart-line"></i> <span data-key="t-handover">Handover</span>
-								</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="<?= site_url('calling'); ?>">
-									<i class="ri-phone-line"></i> <span data-key="t-calling">Calling</span>
-								</a>
-							</li>
-							<li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">Reports</span></li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="#sidebarReports" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarReports">
-									<i class="ri-file-text-line"></i>
-									<span data-key="t-reports">Reports</span>
-								</a>
-								<div class="collapse menu-dropdown" id="sidebarReports">
-									<ul class="nav nav-sm flex-column">
-										<li class="nav-item">
-											<a href="<?= site_url('reports/master'); ?>" class="nav-link" data-key="t-master-report">Master Report</a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('reports/lost-people'); ?>" class="nav-link" data-key="t-lost-people-report">Lost People Report </a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('reports/found-people'); ?>" class="nav-link" data-key="t-found-people-report">Found People Report</a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('reports/calling'); ?>" class="nav-link" data-key="t-calling-report">Calling Report </a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('reports/reunite'); ?>" class="nav-link" data-key="t-reunite">Reunite Report</a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('reports/handover'); ?>" class="nav-link" data-key="t-handover-report">Handover Report</a>
-										</li>
-										<li class="nav-item">
-											<a href="<?= site_url('reports/other'); ?>" class="nav-link" data-key="t-other-report">Other Report</a>
-										</li>
-									</ul>
-								</div>
-							</li>
-							<li class="menu-title"><i class="ri-more-fill"></i> <span data-key="t-pages">Settings</span></li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="<?= site_url('users'); ?>">
-									<i class="ri-user-line"></i>
-									<span data-key="t-users">Users</span>
-								</a>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="#sidebarSettings" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarSettings">
-									<i class="ri-settings-line"></i>
-									<span data-key="t-settings">Settings</span>
-								</a>
-								<div class="collapse menu-dropdown" id="sidebarSettings">
-									<ul class="nav nav-sm flex-column">
-										<li class="nav-item">
-											<a href="<?= site_url('settings/settings'); ?>" class="nav-link" data-key="t-settings">Settings</a>
-										</li>
-									</ul>
-								</div>
-							</li>
-							<li class="nav-item">
-								<a class="nav-link menu-link" href="<?= site_url('tv-configuration'); ?>">
-									<i class="ri-tv-line"></i>
-									<span data-key="t-tv-configuration">TV Configuration</span>
-								</a>
-							</li>
+							</li>-->
 						</ul>
 					</div>
 					<!-- Sidebar -->

@@ -1,9 +1,8 @@
 <?php namespace App\Controllers;
 
 	use App\Models\UserModel;
-	use App\Models\UserRoleModel;
+	use App\Models\UserTypeModel;
 	use App\Models\UserPublicModel;
-	use App\Models\UserLoginLogoutModel;
 	use App\Models\UserAttendanceModel;
 	use App\Models\SessionModel;
 
@@ -80,14 +79,6 @@
 									));
 
 									// Log login action in UserLoginLogoutModel
-									$userLoginLogoutModel = new UserLoginLogoutModel();
-									$userLoginLogoutModel->insert(array(
-										'user_id' => $user['user_id'],
-										'action' => 'login',
-										'date_time' => date("Y-m-d H:i:s"),
-										'device_ip' => $this->request->getIPAddress()
-									));
-
 									// Record login in UserAttendanceModel
 									$userAttendanceModel = new UserAttendanceModel();
 									$userAttendanceModel->recordLogin($user['user_id'], date("Y-m-d"));
@@ -114,8 +105,8 @@
 					}
 				}
 			}
-			$userRoleModel = new UserRoleModel();
-			$userRoles = $userRoleModel->findAll();
+			$userTypeModel = new UserTypeModel();
+			$userTypes = $userTypeModel->findAll();
 
 			$formdata = array(
             'csrftoken' => md5(uniqid(rand(), true)),
@@ -126,7 +117,7 @@
             'errors' => (isset($errors) && !empty($errors)) ? $errors : '',
 			);
 
-			$this->setData('userRoles', $userRoles);
+			$this->setData('usertypes', $userTypes);
 			$this->setData('formdata', $formdata);
 			$this->pageTitle('Login');
 			$this->bodyClass('login');
@@ -406,15 +397,6 @@
 			if ($this->isUserLoggedIn()) {
 				if ($this->session->has('user_id')) {
 					$user_id = $this->session->get('user_id');
-					// Log logout action in UserLoginLogoutModel
-					$userLoginLogoutModel = new UserLoginLogoutModel();
-					$userLoginLogoutModel->insert(array(
-						'user_id' => $user_id,
-						'action' => 'logout',
-						'date_time' => date("Y-m-d H:i:s"),
-						'device_ip' => $this->request->getIPAddress()
-					));
-
 					// Record logout in UserAttendanceModel
 					$userAttendanceModel = new UserAttendanceModel();
 					$userAttendanceModel->recordLogout($user_id, date("Y-m-d"));

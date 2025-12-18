@@ -324,16 +324,6 @@
 	}
 
 	if (!function_exists('array_key_last')) {
-		/**
-			* Polyfill for array_key_last() function added in PHP 7.3.
-			*
-			* Get the last key of the given array without affecting
-			* the internal array pointer.
-			*
-			* @param array $array An array
-			*
-			* @return mixed The last key of array if the array is not empty; NULL otherwise.
-		*/
 		function array_key_last($array)
 		{
 			$key = null;
@@ -624,636 +614,283 @@
 		}
 	}
 
-	if (!function_exists('getPdfStyles')) {
-		function getPdfStyles()
+	/**
+	 * Attendance helper: returns year + month name for a given date.
+	 * If year cannot be derived, falls back to $defaultYear (requested: 2025).
+	 *
+	 * @return array{year:int, month:string}
+	 */
+	if (!function_exists('attendance_year_month')) {
+		function attendance_year_month(?string $date = null, int $defaultYear = 2025): array
 		{
-			return '
-			<style>
-				body {
-					font-family: Arial, sans-serif;
-					font-size: 10px;
-					line-height: 1.4;
-					margin: 0;
-					padding: 10px;
-				}
-
-				.report-header {
-					text-align: center;
-					margin-bottom: 20px;
-					border-bottom: 2px solid #333;
-					padding-bottom: 10px;
-				}
-
-				.report-header h1 {
-					color: #2c3e50;
-					margin: 0 0 10px 0;
-					font-size: 18px;
-				}
-
-				.report-header p {
-					margin: 5px 0;
-					font-size: 11px;
-				}
-
-				.data-table {
-					width: 100%;
-					border-collapse: collapse;
-					margin-top: 15px;
-					font-size: 9px;
-				}
-
-				.data-table th {
-					background-color: #4472C4;
-					color: white;
-					font-weight: bold;
-					text-align: center;
-					padding: 8px 4px;
-					border: 1px solid #333;
-					font-size: 9px;
-				}
-
-				.data-table td {
-					padding: 6px 4px;
-					border: 1px solid #333;
-					text-align: left;
-					vertical-align: top;
-					font-size: 8px;
-				}
-
-				.data-table tr:nth-child(even) {
-					background-color: #f9f9f9;
-				}
-
-				.no-data {
-					text-align: center;
-					font-style: italic;
-					color: #7f8c8d;
-					margin: 20px 0;
-				}
-			</style>';
-		}
-	}
-
-	if (!function_exists('detectAudioLanguage')) {
-		function detectAudioLanguage($base64Audio) {
-			$ch = curl_init('https://meity-auth.ulcacontrib.org/ulca/apis/v0/model/compute');
-			curl_setopt_array($ch, [
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_POST => true,
-				CURLOPT_HTTPHEADER => [
-					'ulcaApiKey: 2156620a9d-d8d5-4b37-860a-aa61cf5942bc',
-					'userID: 53f6dec39c2f48e489a023a5295f1fa4',
-					'Content-Type: application/json'
-				],
-				CURLOPT_POSTFIELDS => json_encode([
-					"modelId" => "66cf53e58cfc565ee0d1a8e2",
-					"task" => "audio-lang-detection",
-					"audioContent" => $base64Audio,
-					"source" => "mixed"
-				])
-			]);
-			$response = curl_exec($ch);
-			if (curl_errno($ch)) throw new Exception('cURL Error: ' . curl_error($ch));
-			curl_close($ch);
-
-			$data = json_decode($response, true);
-			return $data['output'][0]['langPrediction'][0]['langCode'] ?? '-';
-		}
-	}
-
-
-	if (!function_exists('audioToText')) {
-		function audioToText($sourceLanguage, $base64Audio) {
-
-			//get serviceId from bhashini_configuration  pipelineResponseConfig task type asr/config/language/sourceLanguage == $sourceLanguage then set serviceId
-
-			$bhashiniLanguage = getBhashiniLanguage($sourceLanguage, 'language_en');
-			if($bhashiniLanguage){
-				$sourceLanguageCode = $bhashiniLanguage['code'];
+			$date = $date ?: date('Y-m-d');
+			$ts = strtotime($date);
+			if ($ts === false) {
+				return [
+					'year'  => $defaultYear,
+					'month' => 'January',
+				];
 			}
 
-			$bhashiniConfiguration = file_get_contents(base_url('assets/json/bhashini_configuration.json'));
-			$bhashiniConfiguration = json_decode($bhashiniConfiguration, true);
-			$serviceId = '';
-			foreach ($bhashiniConfiguration['pipelineResponseConfig'] as $key => $value) {
-				if($value['taskType'] == 'asr') {
-					foreach($value['config'] as $key => $config){
-						if($config['language']['sourceLanguage'] == $sourceLanguageCode) {
-							$serviceId = $config['serviceId'];
-							break;
-						}
+			$year = (int) date('Y', $ts);
+			if ($year <= 0) {
+				$year = $defaultYear;
+			}
+
+			$month = date('F', $ts); // January, February, ...
+
+			return [
+				'year'  => $year,
+				'month' => $month,
+			];
+		}
+	}
+
+
+
+	if (!function_exists('upload_image')) {
+		function upload_image($file, string $basePath, string $existingFilename = '', $options = array()): array
+		{
+			// Allow passing a boolean as 4th argument for square crop (backward compatible)
+			// Example: upload_image($_FILES['x'] ?? null, 'uploads/users', '', true)
+			if (is_bool($options)) {
+				$options = array('crop_square' => $options, 'create_thumb' => true);
+			} elseif (!is_array($options)) {
+				$options = array();
+			}
+
+			// create_thumb defaults to true
+			$createThumb = array_key_exists('create_thumb', $options) ? (bool) $options['create_thumb'] : true;
+
+			// No new file uploaded - keep existing
+			if (empty($file) || !is_array($file) || empty($file['name'])) {
+				$basePath = trim($basePath, "/\\");
+				return array(
+					'success' => true,
+					'filename' => $existingFilename,
+					'path' => !empty($existingFilename)
+						? ($createThumb ? ($basePath . '/thumb/' . $existingFilename) : ($basePath . '/' . $existingFilename))
+						: '',
+					'large_path' => !empty($existingFilename)
+						? ($createThumb ? ($basePath . '/large/' . $existingFilename) : ($basePath . '/' . $existingFilename))
+						: '',
+					'thumb_path' => !empty($existingFilename) ? ($createThumb ? ($basePath . '/thumb/' . $existingFilename) : '') : '',
+				);
+			}
+
+			$allowedExtensions = $options['allowed_extensions'] ?? array('jpeg', 'jpg', 'png', 'webp', 'gif');
+			$maxSizeBytes = $options['max_size_bytes'] ?? (10 * 1024 * 1024);
+			$cropSquare = !empty($options['crop_square']);
+
+			$fileNameOriginal = (string) ($file['name'] ?? '');
+			$fileSize = (int) ($file['size'] ?? 0);
+			$fileTmp = (string) ($file['tmp_name'] ?? '');
+			$fileError = (int) ($file['error'] ?? 0);
+
+			if ($fileError !== 0) {
+				return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'File upload failed');
+			}
+
+			$fileExt = strtolower(pathinfo($fileNameOriginal, PATHINFO_EXTENSION));
+			if (empty($fileExt) || !in_array($fileExt, $allowedExtensions, true)) {
+				return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => "Extension not allowed, please choose a JPEG, PNG, GIF or WebP file.");
+			}
+			if ($fileSize > $maxSizeBytes) {
+				return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'File size must be 10 MB or less');
+			}
+			if (empty($fileTmp) || !is_file($fileTmp)) {
+				return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'File upload failed');
+			}
+
+			// Resolve base path to absolute
+			$isAbsolute = (bool) preg_match('/^[A-Za-z]:\\\\|^\\//', $basePath);
+			$basePathRel = $isAbsolute ? '' : trim($basePath, "/\\");
+			if (!empty($basePathRel)) {
+				$basePathRel = str_replace('\\', '/', $basePathRel);
+			}
+			$baseDirAbs = $isAbsolute ? rtrim($basePath, "/\\") : rtrim(FCPATH, "/\\") . DIRECTORY_SEPARATOR . str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $basePathRel);
+
+			$largeDirAbs = $baseDirAbs . DIRECTORY_SEPARATOR . 'large';
+			$thumbDirAbs = $baseDirAbs . DIRECTORY_SEPARATOR . 'thumb';
+
+			if (!is_dir($largeDirAbs)) {
+				mkdir($largeDirAbs, 0755, true);
+			}
+			if (!is_dir($thumbDirAbs)) {
+				mkdir($thumbDirAbs, 0755, true);
+			}
+
+			// Sizes: allow config override via app_config('imageSizes')
+			$imageSizes = $options['image_sizes'] ?? app_config('imageSizes');
+			if (!is_array($imageSizes) || !isset($imageSizes['large'], $imageSizes['thumb'])) {
+				$imageSizes = array('large' => array(800, 600), 'thumb' => array(340, 255));
+			}
+
+			$newFilename = md5(uniqid((string) rand(), true)) . '.' . $fileExt;
+
+			try {
+				$largeW = (int) ($imageSizes['large'][0] ?? 800);
+				$largeH = (int) ($imageSizes['large'][1] ?? 600);
+				$thumbW = (int) ($imageSizes['thumb'][0] ?? 340);
+				$thumbH = (int) ($imageSizes['thumb'][1] ?? 255);
+
+				$largeSquare = (int) ($options['square_size_large'] ?? min($largeW, $largeH));
+				$thumbSquare = (int) ($options['square_size_thumb'] ?? min($thumbW, $thumbH));
+				if ($largeSquare <= 0) {
+					$largeSquare = 600;
+				}
+				if ($thumbSquare <= 0) {
+					$thumbSquare = 255;
+				}
+
+				$imageresize = new \App\Libraries\ImageResize($fileTmp);
+				$imageresize->quality_jpg = 90;
+				$imageresize->quality_png = 8;
+				$imageresize->quality_webp = 90;
+
+				$savedLargeAbs = '';
+				$savedThumbAbs = '';
+				$savedSingleAbs = '';
+
+				if ($createThumb) {
+					if ($cropSquare) {
+						$imageresize->crop($largeSquare, $largeSquare, false, \App\Libraries\ImageResize::CROPCENTER);
+					} else {
+						$imageresize->resizeToBestFit($largeW, $largeH);
 					}
-				}
-			}
-
-			if($serviceId == ''){
-				return '-';
-			}
-
-			$curl = curl_init();
-			curl_setopt_array($curl, array(
-			CURLOPT_URL => 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS =>'{
-				"pipelineTasks": [
-					{
-						"taskType": "asr",
-						"config": {
-							"language": {
-								"sourceLanguage": "'.trim($sourceLanguageCode).'"
-							},
-							"serviceId": "'.trim($serviceId).'",
-							"audioFormat": "flac",
-							"samplingRate": 16000
-						}
+					if (!$imageresize->save($largeDirAbs . DIRECTORY_SEPARATOR . $newFilename)) {
+						return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'File upload failed');
 					}
-				],
-				"inputData": {
-					"audio": [
-						{
-							"audioContent": "'.trim($base64Audio).'"
-						}
-					]
-				}
-			}',
-			CURLOPT_HTTPHEADER => array(
-				'Accept:  */*',
-				'User-Agent:  Thunder Client (https://www.thunderclient.com)',
-				'Authorization: gbes7KiCpI3uqHoYH5OY_TPgPVZ67lsDXT65ZTUFKJ752fvm_xROvoac9yuUdw2V',
-				'Content-Type: application/json'
-			),
-			));
+					$savedLargeAbs = $largeDirAbs . DIRECTORY_SEPARATOR . $newFilename;
 
-			$response = curl_exec($curl);
-			curl_close($curl);
-
-			$data = json_decode($response, true);
-			return isset($data['pipelineResponse'][0]['output'][0]['source']) ? $data['pipelineResponse'][0]['output'][0]['source'] : '-';
-		}
-	}
-
-	if (!function_exists('textToText')) {
-		function textToText($sourceLanguage, $targetLanguageCode, $text) {
-
-			$bhashiniLanguage = getBhashiniLanguage($sourceLanguage, 'language_en');
-			if($bhashiniLanguage){
-				$sourceLanguageCode = $bhashiniLanguage['code'];
-			}else{
-				$sourceLanguageCode = $sourceLanguage;
-			}
-
-			$bhashiniConfiguration = file_get_contents(base_url('assets/json/bhashini_configuration.json'));
-			$bhashiniConfiguration = json_decode($bhashiniConfiguration, true);
-			$serviceId = '';
-			foreach ($bhashiniConfiguration['pipelineResponseConfig'] as $key => $value) {
-				if($value['taskType'] == 'translation') {
-					foreach($value['config'] as $key => $config){
-						if($config['language']['sourceLanguage'] == $sourceLanguageCode && $config['language']['targetLanguage'] == $targetLanguageCode) {
-							$serviceId = $config['serviceId'];
-							break;
-						}
+					$thumbResize = new \App\Libraries\ImageResize($savedLargeAbs);
+					$thumbResize->quality_jpg = 85;
+					$thumbResize->quality_png = 7;
+					$thumbResize->quality_webp = 85;
+					if ($cropSquare) {
+						$thumbResize->crop($thumbSquare, $thumbSquare, false, \App\Libraries\ImageResize::CROPCENTER);
+					} else {
+						$thumbResize->resizeToBestFit($thumbW, $thumbH);
 					}
-				}
-			}
-
-			if($serviceId == ''){
-				return '-';
-			}
-
-			$curl = curl_init();
-			curl_setopt_array($curl, array(
-			CURLOPT_URL => 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS =>'{
-				"pipelineTasks": [
-					{
-						"taskType": "translation",
-						"config": {
-							"language": {
-								"sourceLanguage": "'.trim($sourceLanguageCode).'",
-								"targetLanguage": "'.trim($targetLanguageCode).'"
-							},
-							"serviceId": "'.trim($serviceId).'"
-						}
+					$imageBinary = $thumbResize->getImageAsString();
+					if (!file_put_contents($thumbDirAbs . DIRECTORY_SEPARATOR . $newFilename, $imageBinary)) {
+						@unlink($savedLargeAbs);
+						return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'File upload failed');
 					}
-				],
-				"inputData": {
-					"input": [
-						{
-							"source": "'.trim($text).'"
-						}
-					]
-				}
-			}',
-			CURLOPT_HTTPHEADER => array(
-				'Accept:  */*',
-				'User-Agent:  Thunder Client (https://www.thunderclient.com)',
-				'Authorization: gbes7KiCpI3uqHoYH5OY_TPgPVZ67lsDXT65ZTUFKJ752fvm_xROvoac9yuUdw2V',
-				'Content-Type: application/json'
-			),
-			));
-
-			$response = curl_exec($curl);
-			curl_close($curl);
-
-			$data = json_decode($response, true);
-			return isset($data['pipelineResponse'][0]['output'][0]['target']) ? $data['pipelineResponse'][0]['output'][0]['target'] : '-';
-		}
-	}
-
-	if (!function_exists('textToAudio')) {
-		function textToAudio($sourceLanguage, $text) {
-
-			$bhashiniLanguage = getBhashiniLanguage($sourceLanguage, 'language_en');
-			if($bhashiniLanguage){
-				$sourceLanguageCode = $bhashiniLanguage['code'];
-			}else{
-				$sourceLanguageCode = $sourceLanguage;
-			}
-
-			$bhashiniConfiguration = file_get_contents(base_url('assets/json/bhashini_configuration.json'));
-			$bhashiniConfiguration = json_decode($bhashiniConfiguration, true);
-			$serviceId = '';
-			foreach ($bhashiniConfiguration['pipelineResponseConfig'] as $key => $value) {
-				if($value['taskType'] == 'tts') {
-					foreach($value['config'] as $key => $config){
-						if($config['language']['sourceLanguage'] == $sourceLanguageCode ) {
-							$serviceId = $config['serviceId'];
-							break;
-						}
-					}
-				}
-			}
-			if($serviceId == ''){
-				return '-';
-			}
-
-
-			$curl = curl_init();
-			curl_setopt_array($curl, array(
-			CURLOPT_URL => 'https://dhruva-api.bhashini.gov.in/services/inference/pipeline',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS =>'{
-				"pipelineTasks": [
-					{
-						"taskType": "tts",
-						"config": {
-							"language": {
-								"sourceLanguage": "'.trim($sourceLanguageCode).'"
-							},
-							"serviceId": "'.trim($serviceId).'",
-							"gender": "female",
-							"samplingRate": 8000
-						}
-					}
-				],
-				"inputData": {
-					"input": [
-						{
-							"source": "'.trim($text).'"
-						}
-					]
-				}
-			}',
-			CURLOPT_HTTPHEADER => array(
-				'Accept:  */*',
-				'User-Agent:  Thunder Client (https://www.thunderclient.com)',
-				'Authorization: gbes7KiCpI3uqHoYH5OY_TPgPVZ67lsDXT65ZTUFKJ752fvm_xROvoac9yuUdw2V',
-				'Content-Type: application/json'
-			),
-			));
-
-			$response = curl_exec($curl);
-			curl_close($curl);
-			$data = json_decode($response, true);
-			return isset($data['pipelineResponse'][0]['audio'][0]['audioContent']) ? $data['pipelineResponse'][0]['audio'][0]['audioContent'] : '-';
-		}
-	}
-
-
-	if (!function_exists('getBhashiniLanguage')) {
-		function getBhashiniLanguage($value, $type = 'code') {
-			$bhashiniLanguages = file_get_contents(base_url('assets/json/bhashini_languages.json'));
-			$bhashiniLanguages = json_decode($bhashiniLanguages, true);
-
-			foreach ($bhashiniLanguages as $k => $language) {
-				if($type == 'code'){
-					if($language['code'] == $value){
-						return $language;
-					}
-				}
-				else if($type == 'language_en'){
-					if($language['language_en'] == $value){
-						return $language;
-					}
-				}
-				else if($type == 'language_local'){
-					if($language['language_local'] == $value){
-						return $language;
-					}
-				}
-			}
-			return null;
-		}
-	}
-
-	if (!function_exists('addFace')) {
-		function addFace($imageUrl, $externalId) {
-			$AppConfig = new \Config\AppConfig();
-			if($AppConfig->recognize['mxface']['enabled']){
-				addFaceWithMxFace($imageUrl, $externalId);
-			}
-			if($AppConfig->recognize['luxand']['enabled']){
-				addFaceWithLuxand($imageUrl, $externalId);
-			}
-			if($AppConfig->recognize['inhouse']['enabled']){
-				addFaceWithInhouse($imageUrl, $externalId);
-			}
-		}
-	}
-
-
-	if (!function_exists('addFaceWithMxFace')) {
-		function addFaceWithMxFace($imageUrl, $externalId) {
-			$AppConfig = new \Config\AppConfig();
-			$url = $AppConfig->recognize['mxface']['url'];
-			$subscriptionkey = $AppConfig->recognize['mxface']['subscriptionkey'];
-
-			$encoded_image = base64_encode(file_get_contents($imageUrl));
-
-			$curl = curl_init();
-			curl_setopt_array($curl, array(
-				CURLOPT_URL => $url . 'v3/FaceIdentity',
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode(array(
-					'groupId' => $AppConfig->recognize['mxface']['group_id'],
-					'image' => $encoded_image,
-					'externalId' => $externalId, // TODO: generate externalId
-				)),
-				CURLOPT_HTTPHEADER => array(
-					'subscriptionkey: ' . $subscriptionkey,
-					'Content-Type: application/json'
-				),
-			));
-
-			$response = curl_exec($curl);
-			curl_close($curl);
-			return $response;
-		}
-	}
-
-	if (!function_exists('addFaceWithLuxand')) {
-		function addFaceWithLuxand($imageUrl) {
-			$AppConfig = new \Config\AppConfig();
-			$url = $AppConfig->recognize['luxand']['url'];
-			$apitoken = $AppConfig->recognize['luxand']['apitoken'];
-
-			$curl = curl_init();
-
-			curl_setopt_array($curl, array(
-			CURLOPT_URL => $url . 'v2/person',
-			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_ENCODING => '',
-			CURLOPT_MAXREDIRS => 10,
-			CURLOPT_TIMEOUT => 0,
-			CURLOPT_FOLLOWLOCATION => true,
-			CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			CURLOPT_CUSTOMREQUEST => 'POST',
-			CURLOPT_POSTFIELDS => array('name' => '','photos'=> new CURLFILE($imageUrl),'store' => '1','collections' => '','unique' => '0'),
-			CURLOPT_HTTPHEADER => array(
-				'token: '.$apitoken
-			),
-			));
-
-			$response = curl_exec($curl);
-			if (curl_errno($curl)) {
-				echo "cURL Error: " . curl_error($curl);
-			}
-			curl_close($curl);
-			return $response;
-
-			//james-person.jpg
-			//{"status": "success", "uuid": "6901590d-c442-11f0-86d3-0242ac120002", "name": "", "faces": [{"uuid": "68c2c109-c442-11f0-86d3-0242ac120002", "url": "https://faces.nyc3.digitaloceanspaces.com/68c2c109-c442-11f0-86d3-0242ac120002.jpg"}], "collections": []}
-
-		}
-	}
-
-	if (!function_exists('addFaceWithInhouse')) {
-		function addFaceWithInhouse($imageUrl, $externalId) {
-			$AppConfig = new \Config\AppConfig();
-			$url = $AppConfig->recognize['inhouse']['url'];
-			$apitoken = $AppConfig->recognize['inhouse']['apitoken'];
-		}
-	}
-
-	/* OLD 1 to 1 Compare with MXFace API */
-	if (!function_exists('compareWithMxFaceApi')) {
-		function compareWithMxFaceApi($lostImageUrl, $foundImageUrl) {
-			$AppConfig = new \Config\AppConfig();
-			if($AppConfig->recognize['mxface']['enabled']){
-				$url = $AppConfig->recognize['mxface']['url'];
-				$subscriptionkey = $AppConfig->recognize['mxface']['subscriptionkey'];
-
-				$encoded_image1 = base64_encode(file_get_contents($lostImageUrl));
-				$encoded_image2 = base64_encode(file_get_contents($foundImageUrl));
-
-				$curl = curl_init();
-				curl_setopt_array($curl, array(
-				CURLOPT_URL => $url . 'verify',
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => json_encode(array(
-					'encoded_image1' => $encoded_image1,
-					'encoded_image2' => $encoded_image2,
-				)),
-				CURLOPT_HTTPHEADER => array(
-					'subscriptionkey: ' . $subscriptionkey,
-					'Content-Type: application/json'
-				),
-				));
-
-				$response = curl_exec($curl);
-				curl_close($curl);
-
-				if ($response === false || empty($response)) {
-					return -1;
-				}
-
-				$data = json_decode($response, true);
-				if (!is_array($data)) {
-					return -1;
-				}
-
-				if (isset($data['matchedFaces']) && is_array($data['matchedFaces']) && !empty($data['matchedFaces'])) {
-					$first = $data['matchedFaces'][0];
-					if (isset($first['confidence'])) {
-						return (float) $first['confidence'];
-					}
-				}
-
-				// Some MXFace responses may return alternate fields; if not present, treat as failure
-				return -1;
-			}
-
-			// API disabled
-			return -1;
-		}
-	}
-
-	/* API Face Matching */
-	if (!function_exists('compareFaces')) {
-		function compareFaces($imageUrl) {
-			$AppConfig = new \Config\AppConfig();
-			if($AppConfig->recognize['mxface']['enabled']){
-				return mapFacesWithMxFace($imageUrl);
-			}
-			if($AppConfig->recognize['luxand']['enabled']){
-				return mapFacesWithLuxand($imageUrl);
-			}
-			if($AppConfig->recognize['inhouse']['enabled']){
-				return mapFacesWithInhouse($imageUrl);
-			}
-		}
-	}
-
-	if (!function_exists('mapFacesWithMxFace')) {
-		function mapFacesWithMxFace($imageUrl) {
-			$AppConfig = new \Config\AppConfig();
-			$url = $AppConfig->recognize['mxface']['url'];
-			$groupId = $AppConfig->recognize['mxface']['group_id'];
-			$subscriptionkey = $AppConfig->recognize['mxface']['subscriptionkey'];
-			$curl = curl_init();
-
-			curl_setopt_array($curl, array(
-			  CURLOPT_URL => $url . 'v3/FaceIdentity/search',
-			  CURLOPT_RETURNTRANSFER => true,
-			  CURLOPT_ENCODING => '',
-			  CURLOPT_MAXREDIRS => 10,
-			  CURLOPT_TIMEOUT => 0,
-			  CURLOPT_FOLLOWLOCATION => true,
-			  CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-			  CURLOPT_CUSTOMREQUEST => 'POST',
-			  CURLOPT_POSTFIELDS => json_encode(array(
-				'groupIds' => array($groupId),
-				'encoded_Image' => base64_encode(file_get_contents($imageUrl)),
-				'limit' => 10
-			  )),
-			  CURLOPT_HTTPHEADER => array(
-				'subscriptionkey: ' . $subscriptionkey,
-				'Content-Type: application/json'
-			  ),
-			));
-
-			$response = curl_exec($curl);
-			curl_close($curl);
-			$data = json_decode($response, true);
-			$id = isset($data['searchedIdentities'][0]['identityConfidences'][0]['identity']['externalId']) ? $data['searchedIdentities'][0]['identityConfidences'][0]['identity']['externalId'] : null;
-
-			$matches = array();
-			if($id){
-				$LostOrFound = substr($id, 0, 1) == 'L' ? 'Lost' : 'Found';
-				$ListingId  = substr($id, 1);
-				if($LostOrFound == 'Lost'){
-					$lostPeopleModel = new LostPeopleModel();
-					$lostPerson = $lostPeopleModel->select('first_name, last_name, photo, created_at, updated_at')->where('lost_id', $ListingId)->first();
-					if($lostPerson){
-						$matches[] = array(
-							'id' => $ListingId,
-							'url' => site_url('lost-people/view/' . $ListingId),
-							'name' => fullname($lostPerson['first_name'], $lostPerson['last_name']),
-							'match' => (string) (float) round(100),
-							'last_updated' => applicationDateTime(date('Y-m-d H:i:s'))
-						);
-					}
+					$savedThumbAbs = $thumbDirAbs . DIRECTORY_SEPARATOR . $newFilename;
 				} else {
-					$foundPeopleModel = new FoundPeopleModel();
-					$foundPerson = $foundPeopleModel->select('first_name, last_name, photo, created_at, updated_at')->where('found_id', $ListingId)->first();
-					if($foundPerson){
-						$matches[] = array(
-							'id' => $ListingId,
-							'url' => site_url('found-people/view/' . $ListingId),
-							'name' => fullname($foundPerson['first_name'], $foundPerson['last_name']),
-							'match' => (string) (float) round(100),
-							'last_updated' => applicationDateTime(date('Y-m-d H:i:s'))
-						);
+					// No thumb requested: save a single image directly inside base folder (not /large)
+					if (!is_dir($baseDirAbs)) {
+						mkdir($baseDirAbs, 0755, true);
+					}
+
+					if ($cropSquare) {
+						$imageresize->crop($largeSquare, $largeSquare, false, \App\Libraries\ImageResize::CROPCENTER);
+					} else {
+						$imageresize->resizeToBestFit($largeW, $largeH);
+					}
+
+					if (!$imageresize->save($baseDirAbs . DIRECTORY_SEPARATOR . $newFilename)) {
+						return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'File upload failed');
+					}
+					$savedSingleAbs = $baseDirAbs . DIRECTORY_SEPARATOR . $newFilename;
+				}
+
+				// Upload to S3 if enabled in AppConfig
+				$AppConfig = new \Config\AppConfig();
+				$s3Enabled = isset($AppConfig->S3['enabled']) && (bool) $AppConfig->S3['enabled'];
+				$s3Urls = array('large' => '', 'thumb' => '', 'file' => '');
+				if ($s3Enabled) {
+					// We need a relative prefix for S3 keys
+					if (empty($basePathRel)) {
+						// Cannot derive S3 key prefix from absolute path
+						if (!empty($savedLargeAbs)) {
+							@unlink($savedLargeAbs);
+						}
+						if (!empty($savedThumbAbs)) {
+							@unlink($savedThumbAbs);
+						}
+						if (!empty($savedSingleAbs)) {
+							@unlink($savedSingleAbs);
+						}
+						return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'S3 upload failed: invalid base path');
+					}
+
+					try {
+						$s3 = new \App\Libraries\AwsS3();
+						$uploads = array();
+						if ($createThumb) {
+							$uploads[] = array('key' => $basePathRel . '/large/' . $newFilename, 'file' => $savedLargeAbs);
+							$uploads[] = array('key' => $basePathRel . '/thumb/' . $newFilename, 'file' => $savedThumbAbs);
+						} else {
+							$uploads[] = array('key' => $basePathRel . '/' . $newFilename, 'file' => $savedSingleAbs);
+						}
+
+						foreach ($uploads as $u) {
+							if (empty($u['file']) || !is_file($u['file'])) {
+								throw new \RuntimeException('S3 upload failed: missing local file');
+							}
+							$ok = $s3->upload(array('key' => $u['key'], 'file' => $u['file']));
+							if (!$ok) {
+								throw new \RuntimeException($s3->error ?: 'S3 upload failed');
+							}
+
+							// capture urls
+							if ($createThumb && str_contains($u['key'], '/large/')) {
+								$s3Urls['large'] = $s3->url($u['key']);
+							} elseif ($createThumb && str_contains($u['key'], '/thumb/')) {
+								$s3Urls['thumb'] = $s3->url($u['key']);
+							} else {
+								$s3Urls['file'] = $s3->url($u['key']);
+							}
+						}
+
+						// delete old files in S3 (best-effort)
+						if (!empty($existingFilename)) {
+							@$s3->delete($basePathRel . '/large/' . $existingFilename);
+							@$s3->delete($basePathRel . '/thumb/' . $existingFilename);
+							@$s3->delete($basePathRel . '/' . $existingFilename);
+						}
+					} catch (\Throwable $e) {
+						// cleanup newly created local files
+						if (!empty($savedLargeAbs)) {
+							@unlink($savedLargeAbs);
+						}
+						if (!empty($savedThumbAbs)) {
+							@unlink($savedThumbAbs);
+						}
+						if (!empty($savedSingleAbs)) {
+							@unlink($savedSingleAbs);
+						}
+						log_message('error', 'S3 upload error: ' . $e->getMessage());
+						return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'S3 upload failed');
 					}
 				}
-			}
-			return $matches;
-		}
-	}
 
-	if (!function_exists('mapFacesWithLuxand')) {
-		function mapFacesWithLuxand($imageUrl) {
-			$AppConfig = new \Config\AppConfig();
-			if($AppConfig->recognize['luxand']['enabled']){
-				$url = $AppConfig->recognize['luxand']['url'];
-				$apitoken = $AppConfig->recognize['luxand']['apitoken'];
-
-				$curl = curl_init();
-
-				curl_setopt_array($curl, array(
-				CURLOPT_URL => $url . 'photo/search/v2',
-				CURLOPT_RETURNTRANSFER => true,
-				CURLOPT_ENCODING => '',
-				CURLOPT_MAXREDIRS => 10,
-				CURLOPT_TIMEOUT => 0,
-				CURLOPT_FOLLOWLOCATION => true,
-				CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-				CURLOPT_CUSTOMREQUEST => 'POST',
-				CURLOPT_POSTFIELDS => array('photo'=> new CURLFILE($imageUrl),'collections' => ''),
-				CURLOPT_HTTPHEADER => array(
-					'token: '.$apitoken
-				),
-				));
-
-				$response = curl_exec($curl);
-				if (curl_errno($curl)) {
-					echo "cURL Error: " . curl_error($curl);
+				// Remove old files
+				if (!empty($existingFilename)) {
+					// Remove from all possible locations (in case behavior changed)
+					@unlink($largeDirAbs . DIRECTORY_SEPARATOR . $existingFilename);
+					@unlink($thumbDirAbs . DIRECTORY_SEPARATOR . $existingFilename);
+					@unlink($baseDirAbs . DIRECTORY_SEPARATOR . $existingFilename);
 				}
-				curl_close($curl);
-					$data = json_decode($response, true);
-					return array('probability' => isset($data[0]['probability']) ? $data[0]['probability']*100 : null, 'uuid' => isset($data[0]['uuid']) ? $data[0]['uuid'] : null);
 
-					//[{"name":"","probability":0.9992859959602356,"rectangle":{"left":58,"top":24,"right":144,"bottom":110},"uuid":"6901590d-c442-11f0-86d3-0242ac120002","collections":[]}]
+				$largeRel = $isAbsolute ? '' : ($createThumb ? ($basePathRel . '/large/' . $newFilename) : ($basePathRel . '/' . $newFilename));
+				$thumbRel = $isAbsolute ? '' : ($createThumb ? ($basePathRel . '/thumb/' . $newFilename) : '');
+
+				return array(
+					'success' => true,
+					'filename' => $newFilename,
+					'path' => $createThumb ? $thumbRel : $largeRel,
+					'large_path' => $largeRel,
+					'thumb_path' => $thumbRel,
+					's3_large_url' => $s3Urls['large'] ?? '',
+					's3_thumb_url' => $s3Urls['thumb'] ?? '',
+					's3_url' => $s3Urls['file'] ?? '',
+				);
+			} catch (\Throwable $e) {
+				log_message('error', 'Error processing image upload: ' . $e->getMessage());
+				return array('success' => false, 'filename' => $existingFilename, 'path' => '', 'large_path' => '', 'thumb_path' => '', 'message' => 'Error processing image.');
 			}
-			return array('probability' => null, 'uuid' => null);
-		}
-	}
-
-	if (!function_exists('mapFacesWithInhouse')) {
-		function mapFacesWithInhouse($imageUrl) {
-			$AppConfig = new \Config\AppConfig();
-			$url = $AppConfig->recognize['inhouse']['url'];
-			$apitoken = $AppConfig->recognize['inhouse']['apitoken'];
 		}
 	}

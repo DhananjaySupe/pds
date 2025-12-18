@@ -5,15 +5,15 @@
 		protected $table = 'users';
 		protected $primaryKey = 'user_id';
 		protected $returnType = 'array';
-		protected $allowedFields = ['user_id', 'role_id', 'full_name', 'phone', 'email', 'password_hash', 'status', 'otp', 'otp_expiry', 'otp_attempts', 'last_login_at', 'last_login_ip', 'fcm_token', 'code', 'language', 'profile_photo', 'created_by', 'created_at', 'updated_by', 'updated_at'];
+		protected $allowedFields = ['user_id', 'user_type_id', 'full_name', 'phone', 'email', 'password_hash', 'status', 'otp', 'otp_expiry', 'otp_attempts', 'last_login_at', 'last_login_ip', 'fcm_token', 'code', 'language', 'profile_photo', 'created_by', 'created_at', 'updated_by', 'updated_at'];
 		protected $createdField = 'created_at';
 		protected $updatedField = 'updated_at';
 
 		public function findByID($id)
 		{
 			$builder = $this->db->table($this->table);
-			$builder->select($this->table . '.*,roles.name as role');
-			$builder->join('user_roles as roles', 'roles.role_id = ' . $this->table . '.role_id', 'left');
+			$builder->select($this->table . '.*,user_types.type_name as user_type');
+			$builder->join('user_types as user_types', 'user_types.user_type_id = ' . $this->table . '.user_type_id', 'left');
 			$builder->where($this->table . '.user_id', $id);
 			$builder->limit(1);
 			$result = $builder->get()->getResultArray();
@@ -24,8 +24,8 @@
 		public function search($params = array())
 		{
 			$builder = $this->db->table($this->table);
-			$builder->select($this->table . '.*, roles.name as role');
-			$builder->join('user_roles as roles', 'roles.role_id = ' . $this->table . '.role_id', 'left');
+			$builder->select($this->table . '.*, user_types.type_name as user_type');
+			$builder->join('user_types as user_types', 'user_types.user_type_id = ' . $this->table . '.user_type_id', 'left');
 
 			if (isset($params['start_date']) && isset($params['end_date'])) {
 				$builder->where('DATE('.$this->table . '.created_at) >=', $params['start_date']);
@@ -46,8 +46,8 @@
 				$builder->where($this->table . '.phone', $params['phone']);
 			}
 
-			if (isset($params['role'])) {
-				$builder->where($this->table . '.role_id', $params['role']);
+			if (isset($params['user_type_id'])) {
+				$builder->where($this->table . '.user_type_id', $params['user_type_id']);
 			}
 
 			if (isset($params['status'])) {

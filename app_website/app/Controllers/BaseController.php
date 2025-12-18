@@ -10,7 +10,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
 use App\Models\UserModel;
-use App\Models\UserRoleModel;
+use App\Models\UserTypeModel;
 use App\Models\SessionModel;
 
 use App\Libraries\JwtLib;
@@ -82,12 +82,12 @@ abstract class BaseController extends Controller
 			$id = (int) $this->session->get('user_id');
 			if ($id > 0) {
 				$userModel = new UserModel();
-				$userRoleModel = new UserRoleModel();
+				$userTypeModel = new UserTypeModel();
 				$user = $userModel->findByID($id);
 				if ($user) {
 					$this->_user = array(
 					'id' => $user['user_id'],
-					'role' => $user['role'],
+					'user_type' => $user['user_type'],
 					'name' => $user['full_name'],
 					'email' => $user['email'],
 					'phone' => $user['phone'],
@@ -95,7 +95,7 @@ abstract class BaseController extends Controller
 					'center_id' => $this->session->get('center_id') ?? 1
 					);
 
-					$permission = $userRoleModel->findByID($user['role']);
+					$permission = $userTypeModel->findByID($user['user_type_id']);
 					$this->_permission = $permission;
 
 					$this->viewdata['_user'] = $this->_user;

@@ -25,8 +25,8 @@
 										<label for="user_type_id" class="form-label required">Select User Type</label>
 										<select class="form-select" aria-label="Default select example" name="user_type_id" id="user_type_id" required>
 											<option value="">Select User Type</option>
-											<?php foreach ($userRoles as $userRole): ?>
-												<option value="<?= $userRole['role_id']; ?>" <?= isset($formdata['user_type_id']) && $formdata['user_type_id'] == $userRole['role_id'] ? 'selected' : ''; ?>><?= $userRole['name']; ?></option>
+											<?php foreach ($usertypes as $userType): ?>
+												<option value="<?= $userType['user_type_id']; ?>" <?= isset($formdata['user_type_id']) && $formdata['user_type_id'] == $userType['user_type_id'] ? 'selected' : ''; ?>><?= $userType['type_name']; ?></option>
 											<?php endforeach; ?>
 										</select>
 										<div class="invalid-feedback">
