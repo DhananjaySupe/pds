@@ -5,7 +5,7 @@
 		protected $table = 'sale_items';
 		protected $primaryKey = 'sale_item_id';
 		protected $returnType = 'array';
-		protected $allowedFields = ['sale_item_id', 'sale_id', 'qr_id', 'product_id', 'quantity', 'unit_price', 'total_price', 'discount_percent'];
+		protected $allowedFields = ['sale_item_id', 'sale_id', 'qr_id', 'product_id', 'quantity', 'unit_price', 'total_price', 'discount_percent','tax_percent'];
 
 		public function findByID($id)
 		{

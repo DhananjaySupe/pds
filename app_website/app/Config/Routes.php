@@ -41,3 +41,45 @@ $routes->group('users', function($routes) {
 	$routes->add('delete/(:num)', 'Users::delete/$1');
 	$routes->add('view/(:num)', 'Users::view/$1');
 });
+
+$routes->group('products', function($routes) {
+	$routes->add('/', 'Products::index');
+	$routes->get('export', 'Products::export');
+	$routes->get('search', 'Products::search');
+	$routes->add('new', 'Products::new');
+	$routes->add('edit/(:num)', 'Products::edit/$1');
+	$routes->add('delete/(:num)', 'Products::delete/$1');
+	$routes->add('view/(:num)', 'Products::view/$1');
+});
+
+$routes->group('purchase-orders', function($routes) {
+	$routes->add('/', 'PurchaseOrders::index');
+	$routes->get('export', 'PurchaseOrders::export');
+	$routes->add('new', 'PurchaseOrders::new');
+	$routes->add('edit/(:num)', 'PurchaseOrders::edit/$1');
+	$routes->add('delete/(:num)', 'PurchaseOrders::delete/$1');
+	$routes->add('view/(:num)', 'PurchaseOrders::view/$1');
+});
+
+$routes->group('customers', function($routes) {
+	$routes->get('search', 'Customers::search');
+});
+
+$routes->group('sales', function($routes) {
+	$routes->add('/', 'Sales::index');
+	$routes->get('export', 'Sales::export');
+	$routes->add('new', 'Sales::new');
+	$routes->add('edit/(:num)', 'Sales::edit/$1');
+	$routes->add('delete/(:num)', 'Sales::delete/$1');
+	$routes->add('view/(:num)', 'Sales::view/$1');
+});
+
+// Alias for sales
+$routes->group('sell', function($routes) {
+	$routes->add('/', 'Sales::index');
+	$routes->get('export', 'Sales::export');
+	$routes->add('new', 'Sales::new');
+	$routes->add('edit/(:num)', 'Sales::edit/$1');
+	$routes->add('delete/(:num)', 'Sales::delete/$1');
+	$routes->add('view/(:num)', 'Sales::view/$1');
+});

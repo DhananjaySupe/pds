@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable">
+<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="sm" data-sidebar-image="none" data-preloader="disable">
 	<head>
 		<title><?= site_title($title); ?></title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -318,6 +318,21 @@
 							<li class="nav-item">
 								<a class="nav-link menu-link" href="<?= site_url('dashboard'); ?>">
 									<i class="ri-dashboard-2-line"></i> <span data-key="t-dashboards">Dashboard</span>
+								</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link menu-link" href="<?= site_url('products'); ?>">
+									<i class="ri-shopping-bag-3-line"></i> <span data-key="t-products">Products</span>
+								</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link menu-link" href="<?= site_url('purchase-orders'); ?>">
+									<i class="ri-file-list-3-line"></i> <span data-key="t-purchase-orders">Purchase Orders</span>
+								</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link menu-link" href="<?= site_url('sales'); ?>">
+									<i class="ri-shopping-cart-2-line"></i> <span data-key="t-sales">Sales</span>
 								</a>
 							</li>
 							<li class="nav-item">

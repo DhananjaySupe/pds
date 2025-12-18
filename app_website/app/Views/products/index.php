@@ -5,12 +5,12 @@
         <div class="row">
             <div class="col-12">
                 <div class="page-title-box d-sm-flex align-items-center justify-content-between">
-                    <h4 class="mb-sm-0">Users</h4>
+                    <h4 class="mb-sm-0">Products</h4>
                     <div class="page-title-right">
-                        <button type="button" id="btn-export-users" class="btn btn-soft-success btn-label">
+                        <button type="button" id="btn-export-products" class="btn btn-soft-success btn-label">
                             <i class="ri-file-download-line label-icon align-middle fs-16 me-2"></i> Export
                         </button>
-                        <a href="<?= site_url('users/new'); ?>" class="btn btn-primary btn-label ms-2">
+                        <a href="<?= site_url('products/new'); ?>" class="btn btn-primary btn-label ms-2">
                             <i class="ri-add-line label-icon align-middle fs-16 me-2"></i> Add
                         </a>
                     </div>
@@ -21,11 +21,11 @@
             <div class="col-md-3">
                 <label class="form-label fw-semibold">Search</label>
                 <div class="form-icon">
-                    <input type="text" class="form-control form-control-icon" id="filter-keywords" placeholder="Search by name, email or phone" value="<?= esc($filters['keywords']); ?>">
+                    <input type="text" class="form-control form-control-icon" id="filter-keywords" placeholder="Search by name, code, category or brand" value="<?= esc($filters['keywords']); ?>">
                     <i class="ri-search-line"></i>
                 </div>
             </div>
-            <div class="col-md-1">
+            <div class="col-md-2">
                 <label class="form-label fw-semibold">Status</label>
                 <select class="form-select" id="filter-status">
                     <option value="">All Status</option>
@@ -42,13 +42,14 @@
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive min-height-card-body">
-                    <table id="users-grid" class="table dt-responsive w-100 align-middle table-striped">
+                    <table id="products-grid" class="table dt-responsive w-100 align-middle table-striped">
                         <thead class="table-light">
                             <tr>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Email</th>
-                                <th>Phone</th>
+                                <th>Product Name</th>
+                                <th>Code</th>
+                                <th>Category</th>
+                                <th>Brand</th>
+                                <th>Unit Type</th>
                                 <th>Status</th>
                                 <th>Created</th>
                                 <th class="text-center"><i class="ri-more-2-line"></i></th>
@@ -74,3 +75,5 @@
 <?php $this->section('javascripts'); ?>
 
 <?php $this->endSection(); ?>
+
+

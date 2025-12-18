@@ -5,7 +5,7 @@
 		protected $table = 'purchase_order_items';
 		protected $primaryKey = 'poi_id';
 		protected $returnType = 'array';
-		protected $allowedFields = ['poi_id', 'po_id', 'product_id', 'quantity', 'unit_price', 'total_price'];
+		protected $allowedFields = ['poi_id', 'po_id', 'product_id', 'quantity', 'unit_price', 'tax_amount', 'discount_amount','total_price'];
 
 		public function findByID($id)
 		{
