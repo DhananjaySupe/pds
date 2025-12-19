@@ -3,10 +3,12 @@
 use App\Models\SaleModel;
 use App\Models\SaleItemModel;
 use App\Models\ProductModel;
+use App\Models\QrCodeModel;
 use App\Models\CustomerModel;
 use App\Models\GodownModel;
 use App\Models\ShopModel;
 use App\Libraries\ExcelExporter;
+use App\Models\StockInventoryModel;
 
 class Sales extends BaseController
 {
@@ -221,6 +223,99 @@ class Sales extends BaseController
 		$this->pageTitle('Sales');
 		$this->pageJs('assets/js/custom/sales.js?v=s' . $this->AppConfig->jsVersion);
 		return view('sales/index', $this->viewdata);
+	}
+
+	public function searchQr()
+	{
+		if (!$this->isUserLoggedIn()) {
+			return $this->response->setJSON(['results' => []]);
+		}
+
+		$term = trim((string) $this->getParam('term', $this->getParam('q', '')));
+		if (mb_strlen($term) < 3) {
+			return $this->response->setJSON(['results' => []]);
+		}
+
+		$qrModel = new QrCodeModel();
+		$params = array(
+			'keywords' => $term,
+			'limit' => array('length' => 20, 'offset' => 0),
+			'sort' => array('column' => 'qr_codes.qr_code', 'order' => 'asc'),
+		);
+		$qrs = $qrModel->search($params);
+
+		$results = array();
+		if (!empty($qrs)) {
+			foreach ($qrs as $q) {
+				$code = $q['qr_code'] ?? '';
+				$productName = $q['product_name'] ?? '';
+				$text = trim($code . (!empty($productName) ? ' - ' . $productName : ''));
+				$results[] = array(
+					'id' => (int) $q['qr_id'],
+					'text' => $text !== '' ? $text : ('QR #' . (int) $q['qr_id']),
+				);
+			}
+		}
+
+		return $this->response->setJSON(['results' => $results]);
+	}
+
+	public function qrInfo()
+	{
+		if (!$this->isUserLoggedIn()) {
+			return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized']);
+		}
+
+		$qrId = (int) $this->getParam('qr_id', 0);
+		$qrCode = trim((string) $this->getParam('qr_code', ''));
+		$locationType = trim((string) $this->getParam('location_type', ''));
+		$locationId = (int) $this->getParam('location_id', 0);
+
+		$qrModel = new QrCodeModel();
+		$qr = null;
+		if ($qrId > 0) {
+			$qr = $qrModel->findByID($qrId);
+		} elseif ($qrCode !== '') {
+			$qr = $qrModel->findByQRCode($qrCode);
+		}
+
+		if (!$qr) {
+			return $this->response->setJSON(['success' => false, 'message' => 'QR code not found']);
+		}
+
+		// Check stock availability for this QR at selected location (if provided)
+		$stockAvailable = true;
+		$availableQuantity = null;
+		if ($locationType !== '' && $locationId > 0) {
+			$stockModel = new StockInventoryModel();
+			$latestStock = $stockModel->findLatestByQRIDLocation($qr['qr_id'], $locationType, $locationId);
+			if (!$latestStock || (isset($latestStock['is_available']) && (int)$latestStock['is_available'] === 0) || (isset($latestStock['quantity']) && (float)$latestStock['quantity'] <= 0)) {
+				$stockAvailable = false;
+				$availableQuantity = isset($latestStock['quantity']) ? (float)$latestStock['quantity'] : 0.0;
+			} else {
+				$availableQuantity = isset($latestStock['quantity']) ? (float)$latestStock['quantity'] : null;
+			}
+		}
+
+		$productId = (int) ($qr['product_id'] ?? 0);
+		$productName = $qr['product_name'] ?? '';
+		$productCode = $qr['product_code'] ?? '';
+		$productText = trim($productName . (!empty($productCode) ? ' (' . $productCode . ')' : ''));
+
+		$data = array(
+			'qr_id' => (int) $qr['qr_id'],
+			'qr_code' => $qr['qr_code'] ?? '',
+			'product_id' => $productId ?: null,
+			'product_text' => $productText !== '' ? $productText : ($productId ? 'Product #' . $productId : ''),
+			'mrp' => isset($qr['mrp']) ? (float) $qr['mrp'] : null,
+			'stock_available' => $stockAvailable,
+			'stock_quantity' => $availableQuantity,
+		);
+
+		return $this->response->setJSON([
+			'success' => true,
+			'data' => $data,
+		]);
 	}
 
 	public function export()
@@ -606,6 +701,7 @@ class Sales extends BaseController
 	{
 		$items = array();
 		$productIds = $post['item_product_id'] ?? array();
+		$qrIds = $post['item_qr_id'] ?? array();
 		$quantities = $post['item_quantity'] ?? array();
 		$unitPrices = $post['item_unit_price'] ?? array();
 		$discountPercents = $post['item_discount_percent'] ?? array();
@@ -615,9 +711,10 @@ class Sales extends BaseController
 			return $items;
 		}
 
-		$count = max(count($productIds), count($quantities), count($unitPrices), count($discountPercents), count($taxPercents));
+		$count = max(count($productIds), count($qrIds), count($quantities), count($unitPrices), count($discountPercents), count($taxPercents));
 		for ($i = 0; $i < $count; $i++) {
 			$pid = isset($productIds[$i]) ? (int) $productIds[$i] : 0;
+			$qid = isset($qrIds[$i]) && $qrIds[$i] !== '' ? (int) $qrIds[$i] : null;
 			$qty = isset($quantities[$i]) && $quantities[$i] !== '' ? (float) $quantities[$i] : 0;
 			$price = isset($unitPrices[$i]) && $unitPrices[$i] !== '' ? (float) $unitPrices[$i] : 0;
 			$discPct = isset($discountPercents[$i]) && $discountPercents[$i] !== '' ? (float) $discountPercents[$i] : 0;
@@ -640,7 +737,7 @@ class Sales extends BaseController
 			if ($total < 0) $total = 0;
 
 			$items[] = array(
-				'qr_id' => null,
+				'qr_id' => $qid,
 				'product_id' => $pid,
 				'quantity' => $qty,
 				'unit_price' => $price,
@@ -687,7 +784,11 @@ class Sales extends BaseController
 				$productName = $it['product_name'] ?? '';
 				$productCode = $it['product_code'] ?? '';
 				$productText = trim($productName . (!empty($productCode) ? ' (' . $productCode . ')' : ''));
+				$qrCode = $it['qr_code'] ?? '';
 				$out[] = array(
+					'qr_id' => $it['qr_id'] ?? '',
+					'qr_code' => $qrCode,
+					'qr_text' => $qrCode,
 					'product_id' => $it['product_id'] ?? '',
 					'product_text' => $productText,
 					'quantity' => $it['quantity'] ?? '',

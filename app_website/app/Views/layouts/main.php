@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="sm" data-sidebar-image="none" data-preloader="disable">
+<html lang="en" data-layout="vertical" data-topbar="light" data-sidebar="dark" data-sidebar-size="lg" data-sidebar-image="none" data-preloader="disable">
 	<head>
 		<title><?= site_title($title); ?></title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -331,6 +331,16 @@
 								</a>
 							</li>
 							<li class="nav-item">
+								<a class="nav-link menu-link" href="<?= site_url('stock-transfers'); ?>">
+									<i class="ri-truck-line"></i> <span data-key="t-stock-transfers">Stock Transfers</span>
+								</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link menu-link" href="<?= site_url('shop-requests'); ?>">
+									<i class="ri-file-list-3-line"></i> <span data-key="t-shop-requests">Shop Requests</span>
+								</a>
+							</li>
+							<li class="nav-item">
 								<a class="nav-link menu-link" href="<?= site_url('sales'); ?>">
 									<i class="ri-shopping-cart-2-line"></i> <span data-key="t-sales">Sales</span>
 								</a>
@@ -339,6 +349,28 @@
 								<a class="nav-link menu-link" href="<?= site_url('users'); ?>">
 									<i class="ri-user-line"></i> <span data-key="t-users">Users</span>
 								</a>
+							</li>
+							<li class="nav-item">
+								<a class="nav-link menu-link" href="#sidebarReports" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarReports">
+									<i class="ri-file-list-3-line"></i>
+									<span data-key="t-reports">Reports</span>
+								</a>
+								<div class="collapse menu-dropdown" id="sidebarReports">
+									<ul class="nav nav-sm flex-column">
+										<li class="nav-item">
+											<a href="<?= site_url('reports'); ?>" class="nav-link" data-key="t-all-reports">All Reports</a>
+										</li>
+										<li class="nav-item">
+											<a href="<?= site_url('reports/vendor'); ?>" class="nav-link" data-key="t-vendor-reports">Vendor Reports</a>
+										</li>
+										<li class="nav-item">
+											<a href="<?= site_url('reports/godown'); ?>" class="nav-link" data-key="t-godown-reports">Godown Reports</a>
+										</li>
+										<li class="nav-item">
+											<a href="<?= site_url('reports/shop'); ?>" class="nav-link" data-key="t-shop-reports">Shop Reports</a>
+										</li>
+									</ul>
+								</div>
 							</li>
 							<!--<li class="nav-item">
 								<a class="nav-link menu-link" href="#sidebarLosts" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="sidebarLosts">

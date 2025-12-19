@@ -14,11 +14,11 @@
             <div class="col-12">
                 <div class="page-title-box d-sm-flex align-items-center justify-content-between">
                     <h4 class="mb-sm-0">
-                        <i class="ri-shopping-cart-2-line me-2"></i>
-                        <?= $formdata['mode'] == 'new' ? 'Add Sale' : 'Edit Sale' ?>
+                        <i class="ri-truck-line me-2"></i>
+                        <?= $formdata['mode'] == 'new' ? 'Add Stock Transfer' : 'Edit Stock Transfer' ?>
                     </h4>
                     <div class="page-title-right">
-                        <a href="<?= site_url('sales') ?>" class="btn btn-outline-dark btn-label ms-2">
+                        <a href="<?= site_url('stock-transfers') ?>" class="btn btn-outline-dark btn-label ms-2">
                             <i class="ri-arrow-left-line label-icon align-middle fs-16 me-2"></i> Back
                         </a>
                     </div>
@@ -33,51 +33,65 @@
                 </div>
             <?php endif; ?>
 
-            <form class="needs-validation" novalidate method="post" action="<?= site_url('sales/'.($formdata['mode'] == 'new' ? 'new' : 'edit/'.$formdata['id'])) ?>">
+            <form class="needs-validation" novalidate method="post" action="<?= site_url('stock-transfers/'.($formdata['mode'] == 'new' ? 'new' : 'edit/'.$formdata['id'])) ?>">
                 <?= csrf_field() ?>
 
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="card-title mb-0">Sale Details</h5>
+                        <h5 class="card-title mb-0">Transfer Details</h5>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold required">Invoice Number</label>
-                                <input type="text" class="form-control" name="invoice_number" value="<?= esc($formdata['invoice_number']) ?>" placeholder="Auto-generated" required <?= $formdata['mode'] == 'new' ? 'readonly' : '' ?>>
-                                <div class="invalid-feedback">Please enter invoice number.</div>
-                            </div>
-
-                            <div class="col-md-5">
-                                <label class="form-label fw-semibold required">Customer</label>
-                                <select class="form-select js-customer-select" name="customer_id" required>
-                                    <option value=""></option>
-                                    <?php if(!empty($formdata['customer_id'])): ?>
-                                        <option value="<?= esc($formdata['customer_id']) ?>" selected><?= esc($formdata['customer_text'] ?? ('Customer #'.$formdata['customer_id'])) ?></option>
-                                    <?php endif; ?>
-                                </select>
-                                <div class="invalid-feedback">Please select customer.</div>
+                                <label class="form-label fw-semibold required">Transfer Number</label>
+                                <input type="text" class="form-control" name="transfer_number" value="<?= esc($formdata['transfer_number']) ?>" placeholder="Auto-generated" required <?= $formdata['mode'] == 'new' ? 'readonly' : '' ?>>
+                                <div class="invalid-feedback">Please enter transfer number.</div>
                             </div>
 
                             <div class="col-md-2">
-                                <label class="form-label fw-semibold required">Location Type</label>
-                                <select class="form-select" id="location_type" name="location_type" required>
-                                    <option value="shop" <?= (string)$formdata['location_type'] === 'shop' ? 'selected' : '' ?>>Shop</option>
-                                    <option value="godown" <?= (string)$formdata['location_type'] === 'godown' ? 'selected' : '' ?>>Godown</option>
+                                <label class="form-label fw-semibold required">From Location Type</label>
+                                <select class="form-select" id="from_location_type" name="from_location_type" required>
+                                    <option value="godown" <?= (string)$formdata['from_location_type'] === 'godown' ? 'selected' : '' ?>>Godown</option>
+                                    <option value="shop" <?= (string)$formdata['from_location_type'] === 'shop' ? 'selected' : '' ?>>Shop</option>
                                 </select>
                             </div>
 
-                            <div class="col-md-2">
-                                <label class="form-label fw-semibold required">Location</label>
-                                <select class="form-select" id="location_id" name="location_id" required>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold required">From Location</label>
+                                <select class="form-select" id="from_location_id" name="from_location_id" required>
                                     <option value="">Select location</option>
                                     <?php foreach(($shopOptions ?? array()) as $s): ?>
-                                        <option data-type="shop" value="<?= $s['shop_id'] ?>" <?= ((string)$formdata['location_type'] === 'shop' && (string)$formdata['location_id'] === (string)$s['shop_id']) ? 'selected' : '' ?>>
+                                        <option data-type="shop" value="<?= $s['shop_id'] ?>" <?= ((string)$formdata['from_location_type'] === 'shop' && (string)$formdata['from_location_id'] === (string)$s['shop_id']) ? 'selected' : '' ?>>
                                             <?= esc($s['shop_name'] ?? ('Shop #'.$s['shop_id'])) ?>
                                         </option>
                                     <?php endforeach; ?>
                                     <?php foreach(($godownOptions ?? array()) as $g): ?>
-                                        <option data-type="godown" value="<?= $g['godown_id'] ?>" <?= ((string)$formdata['location_type'] === 'godown' && (string)$formdata['location_id'] === (string)$g['godown_id']) ? 'selected' : '' ?>>
+                                        <option data-type="godown" value="<?= $g['godown_id'] ?>" <?= ((string)$formdata['from_location_type'] === 'godown' && (string)$formdata['from_location_id'] === (string)$g['godown_id']) ? 'selected' : '' ?>>
+                                            <?= esc($g['godown_name'] ?? ('Godown #'.$g['godown_id'])) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold required">To Location Type</label>
+                                <select class="form-select" id="to_location_type" name="to_location_type" required>
+                                    <option value="shop" <?= (string)$formdata['to_location_type'] === 'shop' ? 'selected' : '' ?>>Shop</option>
+                                    <option value="godown" <?= (string)$formdata['to_location_type'] === 'godown' ? 'selected' : '' ?>>Godown</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold required">To Location</label>
+                                <select class="form-select" id="to_location_id" name="to_location_id" required>
+                                    <option value="">Select location</option>
+                                    <?php foreach(($shopOptions ?? array()) as $s): ?>
+                                        <option data-type="shop" value="<?= $s['shop_id'] ?>" <?= ((string)$formdata['to_location_type'] === 'shop' && (string)$formdata['to_location_id'] === (string)$s['shop_id']) ? 'selected' : '' ?>>
+                                            <?= esc($s['shop_name'] ?? ('Shop #'.$s['shop_id'])) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                    <?php foreach(($godownOptions ?? array()) as $g): ?>
+                                        <option data-type="godown" value="<?= $g['godown_id'] ?>" <?= ((string)$formdata['to_location_type'] === 'godown' && (string)$formdata['to_location_id'] === (string)$g['godown_id']) ? 'selected' : '' ?>>
                                             <?= esc($g['godown_name'] ?? ('Godown #'.$g['godown_id'])) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -85,28 +99,33 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold required">Payment Status</label>
-                                <select class="form-select" name="payment_status" required>
+                                <label class="form-label fw-semibold required">Status</label>
+                                <select class="form-select" name="status" required>
                                     <option value="">Select</option>
-                                    <?php foreach(($paymentStatusOptions ?? array()) as $value => $label): ?>
-                                        <option value="<?= esc($value) ?>" <?= (string)$formdata['payment_status'] === (string)$value ? 'selected' : '' ?>><?= esc($label) ?></option>
+                                    <?php foreach(($statusOptions ?? array()) as $value => $label): ?>
+                                        <option value="<?= esc($value) ?>" <?= (string)$formdata['status'] === (string)$value ? 'selected' : '' ?>><?= esc($label) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold">Payment Method</label>
-                                <select class="form-select" name="payment_method">
-                                    <?php foreach(($paymentMethodOptions ?? array()) as $value => $label): ?>
-                                        <option value="<?= esc($value) ?>" <?= (string)$formdata['payment_method'] === (string)$value ? 'selected' : '' ?>><?= esc($label) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <label class="form-label fw-semibold">Dispatch Date</label>
+                                <input type="date" class="form-control" name="dispatch_date" value="<?= esc($formdata['dispatch_date']) ?>">
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold required">Sale Date</label>
-                                <input type="date" class="form-control" name="sale_date" value="<?= esc($formdata['sale_date']) ?>" required>
-                                <div class="invalid-feedback">Please select sale date.</div>
+                                <label class="form-label fw-semibold">Delivery Date</label>
+                                <input type="date" class="form-control" name="delivery_date" value="<?= esc($formdata['delivery_date']) ?>">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Transporter Name</label>
+                                <input type="text" class="form-control" name="transporter_name" value="<?= esc($formdata['transporter_name']) ?>" placeholder="Enter transporter name">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Vehicle Number</label>
+                                <input type="text" class="form-control" name="vehicle_number" value="<?= esc($formdata['vehicle_number']) ?>" placeholder="Enter vehicle number">
                             </div>
 
                             <div class="col-12">
@@ -123,23 +142,20 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-striped align-middle" id="sale-items-table">
+                            <table class="table table-striped align-middle" id="transfer-items-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:20%;">QR Code</th>
                                         <th style="width:30%;">Product</th>
                                         <th style="width:10%;">Qty</th>
-                                        <th style="width:12%;">Unit Price</th>
-                                        <th style="width:8%;">Disc %</th>
-                                        <th style="width:8%;">Tax %</th>
-                                        <th style="width:12%;">Total</th>
+                                        <th style="width:40%;">Available Stock</th>
                                         <th style="width:5%;" class="text-center"><i class="ri-more-2-line"></i></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if(!empty($items)): ?>
                                         <?php foreach($items as $it): ?>
-                                            <tr class="sale-item-row">
+                                            <tr class="transfer-item-row">
                                                 <td>
                                                     <select class="form-select item-qr js-qr-select" name="item_qr_id[]">
                                                         <option value=""></option>
@@ -147,6 +163,7 @@
                                                             <option value="<?= esc($it['qr_id']) ?>" selected><?= esc($it['qr_text'] ?? ($it['qr_code'] ?? ('QR #'.$it['qr_id']))) ?></option>
                                                         <?php endif; ?>
                                                     </select>
+                                                    <input type="hidden" class="item-source-stock-id" name="item_source_stock_id[]" value="<?= esc($it['source_stock_id'] ?? '') ?>">
                                                 </td>
                                                 <td>
                                                     <select class="form-select item-product js-product-select" name="item_product_id[]">
@@ -157,10 +174,7 @@
                                                     </select>
                                                 </td>
                                                 <td><input type="number" class="form-control item-qty" name="item_quantity[]" value="<?= esc($it['quantity'] ?? '1') ?>" step="0.01" min="0"></td>
-                                                <td><input type="number" class="form-control item-price" name="item_unit_price[]" value="<?= esc($it['unit_price'] ?? '') ?>" step="0.01" min="0"></td>
-                                                <td><input type="number" class="form-control item-discount-percent" name="item_discount_percent[]" value="<?= esc($it['discount_percent'] ?? '') ?>" step="0.01" min="0" max="100" placeholder="0"></td>
-                                                <td><input type="number" class="form-control item-tax-percent" name="item_tax_percent[]" value="<?= esc($it['tax_percent'] ?? '') ?>" step="0.01" min="0" max="100" placeholder="0"></td>
-                                                <td class="item-total text-end fw-semibold">0.00</td>
+                                                <td class="item-stock-info text-muted small">—</td>
                                                 <td class="text-center">
                                                     <button type="button" class="btn btn-sm btn-soft-danger btn-remove-item" title="Remove">
                                                         <i class="ri-delete-bin-line"></i>
@@ -169,11 +183,12 @@
                                             </tr>
                                         <?php endforeach; ?>
                                     <?php else: ?>
-                                        <tr class="sale-item-row">
+                                        <tr class="transfer-item-row">
                                             <td>
                                                 <select class="form-select item-qr js-qr-select" name="item_qr_id[]">
                                                     <option value=""></option>
                                                 </select>
+                                                <input type="hidden" class="item-source-stock-id" name="item_source_stock_id[]" value="">
                                             </td>
                                             <td>
                                                 <select class="form-select item-product js-product-select" name="item_product_id[]">
@@ -181,10 +196,7 @@
                                                 </select>
                                             </td>
                                             <td><input type="number" class="form-control item-qty" name="item_quantity[]" value="1" step="0.01" min="0"></td>
-                                            <td><input type="number" class="form-control item-price" name="item_unit_price[]" value="" step="0.01" min="0"></td>
-                                            <td><input type="number" class="form-control item-discount-percent" name="item_discount_percent[]" value="" step="0.01" min="0" max="100" placeholder="0"></td>
-                                            <td><input type="number" class="form-control item-tax-percent" name="item_tax_percent[]" value="" step="0.01" min="0" max="100" placeholder="0"></td>
-                                            <td class="item-total text-end fw-semibold">0.00</td>
+                                            <td class="item-stock-info text-muted small">—</td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-sm btn-soft-danger btn-remove-item" title="Remove">
                                                     <i class="ri-delete-bin-line"></i>
@@ -200,41 +212,18 @@
                                                 <i class="ri-add-line me-1"></i> Add Item
                                             </button>
                                         </th>
-                                        <th colspan="4" class="text-end">Sub Total</th>
-                                        <th class="text-end" id="sale-subtotal">0.00</th>
-                                        <th></th>
-                                    </tr>
-                                    <tr>
-                                        <th colspan="6" class="text-end">Item Tax</th>
-                                        <th class="text-end" id="sale-tax-total">0.00</th>
-                                        <th></th>
-                                    </tr>
-                                    <tr>
-                                        <th colspan="6" class="text-end">Discount on Sale</th>
-                                        <th class="text-end">
-                                            <input type="number" class="form-control form-control-sm text-end" id="discount_amount" name="discount_amount" value="<?= esc($formdata['discount_amount']) ?>" step="0.01" min="0" placeholder="0.00">
-                                        </th>
-                                        <th></th>
-                                    </tr>
-                                    <tr>
-                                        <th colspan="6" class="text-end">Final Total</th>
-                                        <th class="text-end" id="sale-final-total">0.00</th>
-                                        <th></th>
+                                        <th colspan="3" class="text-end">Total Items: <span id="total-items-count">0</span></th>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
-                        <small class="text-muted">Final Total = Sub Total + Item Tax - Discount</small>
                     </div>
                 </div>
 
-                <!-- Hidden (computed by JS, server recomputes anyway) -->
-                <input type="hidden" id="tax_amount" name="tax_amount" value="<?= esc($formdata['tax_amount'] ?? '') ?>">
-
                 <div class="text-end mt-3">
-                    <a href="<?= site_url('sales'); ?>" class="btn btn-danger">Cancel</a>
+                    <a href="<?= site_url('stock-transfers'); ?>" class="btn btn-danger">Cancel</a>
                     <button type="submit" class="btn btn-primary" data-loading="Saving...">
-                        <?= $formdata['mode'] == 'new' ? 'Create Sale' : 'Update Sale' ?>
+                        <?= $formdata['mode'] == 'new' ? 'Create Transfer' : 'Update Transfer' ?>
                     </button>
                 </div>
             </form>
@@ -243,5 +232,4 @@
 </div>
 
 <?php $this->endSection(); ?>
-
 

@@ -1,8 +1,8 @@
 <?php namespace App\Models;
 	use CodeIgniter\Model;
-	class TransferItemModel extends Model
+	class StockTransferItemModel extends Model
 	{
-		protected $table = 'transfer_items';
+		protected $table = 'stock_transfer_items';
 		protected $primaryKey = 'ti_id';
 		protected $returnType = 'array';
 		protected $allowedFields = ['ti_id', 'transfer_id', 'qr_id', 'product_id', 'quantity', 'source_stock_id'];

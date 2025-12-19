@@ -68,10 +68,41 @@ $routes->group('customers', function($routes) {
 $routes->group('sales', function($routes) {
 	$routes->add('/', 'Sales::index');
 	$routes->get('export', 'Sales::export');
+	$routes->get('search-qr', 'Sales::searchQr');
+	$routes->get('qr-info', 'Sales::qrInfo');
 	$routes->add('new', 'Sales::new');
 	$routes->add('edit/(:num)', 'Sales::edit/$1');
 	$routes->add('delete/(:num)', 'Sales::delete/$1');
 	$routes->add('view/(:num)', 'Sales::view/$1');
+});
+
+$routes->group('stock-transfers', function($routes) {
+	$routes->add('/', 'StockTransfers::index');
+	$routes->get('export', 'StockTransfers::export');
+	$routes->get('search-qr', 'StockTransfers::searchQr');
+	$routes->get('qr-info', 'StockTransfers::qrInfo');
+	$routes->add('new', 'StockTransfers::new');
+	$routes->add('edit/(:num)', 'StockTransfers::edit/$1');
+	$routes->add('delete/(:num)', 'StockTransfers::delete/$1');
+	$routes->add('view/(:num)', 'StockTransfers::view/$1');
+});
+
+$routes->group('shop-requests', function($routes) {
+	$routes->add('/', 'ShopRequests::index');
+	$routes->get('export', 'ShopRequests::export');
+	$routes->add('new', 'ShopRequests::new');
+	$routes->add('edit/(:num)', 'ShopRequests::edit/$1');
+	$routes->add('delete/(:num)', 'ShopRequests::delete/$1');
+	$routes->add('view/(:num)', 'ShopRequests::view/$1');
+});
+
+$routes->group('reports', function($routes) {
+	$routes->add('/', 'Reports::index');
+	$routes->get('vendor', 'Reports::vendor');
+	$routes->get('godown', 'Reports::godown');
+	$routes->get('shop', 'Reports::shop');
+	$routes->get('export', 'Reports::export');
+	$routes->get('pdf-export', 'Reports::pdfExport');
 });
 
 // Alias for sales

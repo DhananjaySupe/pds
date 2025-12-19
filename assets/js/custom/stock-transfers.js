@@ -1,7 +1,7 @@
 $(document).ready(function () {
     // List page
-    if ($('#sales-grid').length) {
-        var salesGrid = $('#sales-grid').DataTable({
+    if ($('#transfers-grid').length) {
+        var transfersGrid = $('#transfers-grid').DataTable({
             responsive: true,
             autoWidth: false,
             lengthChange: false,
@@ -13,16 +13,16 @@ $(document).ready(function () {
             stateSave: true,
             ajax: {
                 type: "POST",
-                url: SITE_URL + "/sales",
+                url: SITE_URL + "/stock-transfers",
                 beforeSend: function () {
-                    showLoader('.card-body', 'salesLoader');
+                    showLoader('.card-body', 'transfersLoader');
                 },
                 complete: function () {
-                    hideLoader('salesLoader');
+                    hideLoader('transfersLoader');
                 },
                 data: function (d) {
                     d.keywords = oFilter.keywords;
-                    d.payment_status = oFilter.payment_status;
+                    d.status = oFilter.status;
                     d.recordstotal = nRecordsTotal;
                     d.recordsfiltered = nRecordsFiltered;
                 },
@@ -33,18 +33,18 @@ $(document).ready(function () {
                 }
             },
             columns: [
-                { data: "invoice_number", width: "15%", orderable: true },
-                { data: "customer", width: "25%", orderable: true },
-                { data: "payment_status", width: "10%", orderable: true },
-                { data: "sale_date", width: "15%", orderable: true },
-                { data: "final_amount", width: "12%", orderable: true, className: "text-end" },
+                { data: "transfer_number", width: "15%", orderable: true },
+                { data: "from_location", width: "20%", orderable: false },
+                { data: "to_location", width: "20%", orderable: false },
+                { data: "status", width: "12%", orderable: true },
+                { data: "dispatch_date", width: "15%", orderable: true },
                 { data: "created_at", width: "15%", orderable: true },
                 { data: "actions", width: "8%", orderable: false, className: "text-center" }
             ],
             language: {
-                info: "Showing _START_ to _END_ of _TOTAL_ sales",
-                infoEmpty: "0 sales",
-                emptyTable: "No sales found.",
+                info: "Showing _START_ to _END_ of _TOTAL_ transfers",
+                infoEmpty: "0 transfers",
+                emptyTable: "No transfers found.",
                 paginate: {
                     first: '<i class="ri-arrow-left-s-fill"></i>',
                     previous: '<i class="ri-arrow-left-s-line"></i>',
@@ -61,29 +61,29 @@ $(document).ready(function () {
             if (e.keyCode === 13) {
                 oFilter.keywords = $(this).val();
                 nRecordsFiltered = 0;
-                salesGrid.ajax.reload();
+                transfersGrid.ajax.reload();
             }
         });
 
-        $('#filter-payment-status').on('change', function () {
-            oFilter.payment_status = $(this).val();
+        $('#filter-status').on('change', function () {
+            oFilter.status = $(this).val();
             nRecordsFiltered = 0;
-            salesGrid.ajax.reload();
+            transfersGrid.ajax.reload();
         });
 
         $('#filter-reset').on('click', function () {
             $('#filter-keywords').val('');
-            $('#filter-payment-status').val('');
+            $('#filter-status').val('');
             oFilter.keywords = '';
-            oFilter.payment_status = '';
+            oFilter.status = '';
             nRecordsFiltered = 0;
-            salesGrid.ajax.reload();
+            transfersGrid.ajax.reload();
         });
 
-        $('#btn-export-sales').on('click', function () {
+        $('#btn-export-transfers').on('click', function () {
             var params = {
                 keywords: $('#filter-keywords').val().trim(),
-                payment_status: $('#filter-payment-status').val()
+                status: $('#filter-status').val()
             };
             var queryParts = [];
             $.each(params, function (key, value) {
@@ -92,16 +92,16 @@ $(document).ready(function () {
                 }
             });
             var queryString = queryParts.length ? '?' + queryParts.join('&') : '';
-            window.location = SITE_URL + "/sales/export" + queryString;
+            window.location = SITE_URL + "/stock-transfers/export" + queryString;
         });
 
-        $(document).on("click", "#sales-grid td a[data-action='delete']", function (e) {
+        $(document).on("click", "#transfers-grid td a[data-action='delete']", function (e) {
             e.preventDefault();
             var $link = $(this);
             var id = $link.data('id');
             var name = $link.data('name');
             bootbox.confirm({
-                title: 'Delete sale?',
+                title: 'Delete stock transfer?',
                 message: 'Are you sure you want to delete <b>"' + name + '"</b>?',
                 className: 'bootbox-delete',
                 centerVertical: true,
@@ -115,7 +115,7 @@ $(document).ready(function () {
                         var button = $('.bootbox-delete button.bootbox-accept');
                         $.ajax({
                             type: "DELETE",
-                            url: SITE_URL + "/sales/delete/" + id,
+                            url: SITE_URL + "/stock-transfers/delete/" + id,
                             dataType: 'json',
                             beforeSend: function () {
                                 button.attr('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
@@ -127,7 +127,7 @@ $(document).ready(function () {
                                 if (response.success) {
                                     nRecordsTotal = 0;
                                     nRecordsFiltered = 0;
-                                    salesGrid.ajax.reload();
+                                    transfersGrid.ajax.reload();
                                     if (typeof response.message !== 'undefined') {
                                         toastr["success"](response.message);
                                     }
@@ -143,17 +143,37 @@ $(document).ready(function () {
     }
 
     // Details page
-    if ($('#sale-items-table').length) {
-        function parseNum(v) {
-            var n = parseFloat(v);
-            return isNaN(n) ? 0 : n;
-        }
+    if ($('#transfer-items-table').length) {
+        function initQrSelect($select) {
+            if (!$select || !$select.length) return;
+            if (typeof $.fn.select2 === 'undefined') return;
+            if ($select.hasClass('select2-hidden-accessible')) return;
 
-        function clampPct(p) {
-            p = parseNum(p);
-            if (p < 0) p = 0;
-            if (p > 100) p = 100;
-            return p;
+            var fromLocationType = ($('#from_location_type').val() || '').toString();
+            var fromLocationId = $('#from_location_id').val();
+
+            $select.select2({
+                width: '100%',
+                placeholder: 'Select QR code (min 3 char)',
+                allowClear: true,
+                minimumInputLength: 3,
+                ajax: {
+                    url: SITE_URL + '/stock-transfers/search-qr',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return {
+                            term: params.term,
+                            from_location_type: fromLocationType,
+                            from_location_id: fromLocationId
+                        };
+                    },
+                    processResults: function (data) {
+                        return data;
+                    },
+                    cache: true
+                }
+            });
         }
 
         function initProductSelect($select) {
@@ -181,99 +201,14 @@ $(document).ready(function () {
             });
         }
 
-        function initQrSelect($select) {
-            if (!$select || !$select.length) return;
-            if (typeof $.fn.select2 === 'undefined') return;
-            if ($select.hasClass('select2-hidden-accessible')) return;
-
-            $select.select2({
-                width: '100%',
-                placeholder: 'Select QR code (min 3 char)',
-                allowClear: true,
-                minimumInputLength: 3,
-                ajax: {
-                    url: SITE_URL + '/sales/search-qr',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return { term: params.term };
-                    },
-                    processResults: function (data) {
-                        return data;
-                    },
-                    cache: true
-                }
-            });
+        function updateTotalItemsCount() {
+            var count = $('#transfer-items-table tbody tr.transfer-item-row').length;
+            $('#total-items-count').text(count);
         }
 
-        function initCustomerSelect($select) {
-            if (!$select || !$select.length) return;
-            if (typeof $.fn.select2 === 'undefined') return;
-            if ($select.hasClass('select2-hidden-accessible')) return;
-
-            $select.select2({
-                width: '100%',
-                placeholder: 'Select customer (min 3 char)',
-                allowClear: true,
-                minimumInputLength: 3,
-                ajax: {
-                    url: SITE_URL + '/customers/search',
-                    dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return { term: params.term };
-                    },
-                    processResults: function (data) {
-                        return data;
-                    },
-                    cache: true
-                }
-            });
-        }
-
-        function recalcRow($row) {
-            var qty = parseNum($row.find('.item-qty').val());
-            var price = parseNum($row.find('.item-price').val());
-            var discPct = clampPct($row.find('.item-discount-percent').val());
-            var taxPct = clampPct($row.find('.item-tax-percent').val());
-
-            // keep normalized
-            $row.find('.item-discount-percent').val(discPct);
-            $row.find('.item-tax-percent').val(taxPct);
-
-            var base = qty * price;
-            var disc = base * (discPct / 100);
-            var net = base - disc;
-            if (net < 0) net = 0;
-            var tax = net * (taxPct / 100);
-            var total = net + tax;
-            $row.find('.item-total').text(total.toFixed(2));
-            return { net: net, tax: tax, total: total };
-        }
-
-        function recalcTotals() {
-            var sub = 0;
-            var taxTotal = 0;
-            $('#sale-items-table tbody tr.sale-item-row').each(function () {
-                var r = recalcRow($(this));
-                sub += r.net;
-                taxTotal += r.tax;
-            });
-            var discount = parseNum($('#discount_amount').val());
-            var finalTotal = sub + taxTotal - discount;
-            if (finalTotal < 0) finalTotal = 0;
-
-            $('#sale-subtotal').text(sub.toFixed(2));
-            $('#sale-tax-total').text(taxTotal.toFixed(2));
-            $('#sale-final-total').text(finalTotal.toFixed(2));
-
-            // Keep hidden field synced (server recomputes anyway)
-            $('#tax_amount').val(taxTotal.toFixed(2));
-        }
-
-        function filterLocationOptions() {
-            var type = ($('#location_type').val() || '').toString();
-            var $loc = $('#location_id');
+        function filterLocationOptions($select, locationTypeId) {
+            var type = ($(locationTypeId).val() || '').toString();
+            var $loc = $select;
             $loc.find('option').each(function () {
                 var $opt = $(this);
                 var optType = ($opt.data('type') || '').toString();
@@ -298,32 +233,42 @@ $(document).ready(function () {
 
         function addRow() {
             var rowHtml = '' +
-                '<tr class="sale-item-row">' +
-                '  <td><select class="form-select item-qr js-qr-select" name="item_qr_id[]"><option value=""></option></select></td>' +
+                '<tr class="transfer-item-row">' +
+                '  <td><select class="form-select item-qr js-qr-select" name="item_qr_id[]"><option value=""></option></select><input type="hidden" class="item-source-stock-id" name="item_source_stock_id[]" value=""></td>' +
                 '  <td><select class="form-select item-product js-product-select" name="item_product_id[]"><option value=""></option></select></td>' +
                 '  <td><input type="number" class="form-control item-qty" name="item_quantity[]" value="1" step="0.01" min="0"></td>' +
-                '  <td><input type="number" class="form-control item-price" name="item_unit_price[]" value="" step="0.01" min="0"></td>' +
-                '  <td><input type="number" class="form-control item-discount-percent" name="item_discount_percent[]" value="" step="0.01" min="0" max="100" placeholder="0"></td>' +
-                '  <td><input type="number" class="form-control item-tax-percent" name="item_tax_percent[]" value="" step="0.01" min="0" max="100" placeholder="0"></td>' +
-                '  <td class="item-total text-end fw-semibold">0.00</td>' +
+                '  <td class="item-stock-info text-muted small">—</td>' +
                 '  <td class="text-center"><button type="button" class="btn btn-sm btn-soft-danger btn-remove-item" title="Remove"><i class="ri-delete-bin-line"></i></button></td>' +
                 '</tr>';
-            $('#sale-items-table tbody').append(rowHtml);
-            var $lastRow = $('#sale-items-table tbody tr.sale-item-row:last');
+            $('#transfer-items-table tbody').append(rowHtml);
+            var $lastRow = $('#transfer-items-table tbody tr.transfer-item-row:last');
             initQrSelect($lastRow.find('.js-qr-select'));
             initProductSelect($lastRow.find('.js-product-select'));
-            recalcTotals();
+            updateTotalItemsCount();
         }
 
         // Init select2
-        initCustomerSelect($('.js-customer-select'));
-        $('#sale-items-table .js-qr-select').each(function () { initQrSelect($(this)); });
-        $('#sale-items-table .js-product-select').each(function () { initProductSelect($(this)); });
+        $('#transfer-items-table .js-qr-select').each(function () { initQrSelect($(this)); });
+        $('#transfer-items-table .js-product-select').each(function () { initProductSelect($(this)); });
 
         // Init location filtering
-        filterLocationOptions();
-        $('#location_type').on('change', function () {
-            filterLocationOptions();
+        filterLocationOptions($('#from_location_id'), '#from_location_type');
+        filterLocationOptions($('#to_location_id'), '#to_location_type');
+
+        $('#from_location_type').on('change', function () {
+            filterLocationOptions($('#from_location_id'), '#from_location_type');
+            // Reinitialize QR selects when from location changes
+            $('#transfer-items-table .js-qr-select').each(function () {
+                var $sel = $(this);
+                if ($sel.hasClass('select2-hidden-accessible')) {
+                    $sel.select2('destroy');
+                }
+                initQrSelect($sel);
+            });
+        });
+
+        $('#to_location_type').on('change', function () {
+            filterLocationOptions($('#to_location_id'), '#to_location_type');
         });
 
         $('#btn-add-item').on('click', function () {
@@ -332,16 +277,16 @@ $(document).ready(function () {
 
         $(document).on('click', '.btn-remove-item', function () {
             var $row = $(this).closest('tr');
-            var $tbody = $('#sale-items-table tbody');
-            if ($tbody.find('tr.sale-item-row').length > 1) {
+            var $tbody = $('#transfer-items-table tbody');
+            if ($tbody.find('tr.transfer-item-row').length > 1) {
                 // destroy select2 to avoid leaks
-                var $prodSel = $row.find('.js-product-select');
-                if ($prodSel.hasClass('select2-hidden-accessible')) {
-                    $prodSel.select2('destroy');
-                }
                 var $qrSel = $row.find('.js-qr-select');
                 if ($qrSel.hasClass('select2-hidden-accessible')) {
                     $qrSel.select2('destroy');
+                }
+                var $prodSel = $row.find('.js-product-select');
+                if ($prodSel.hasClass('select2-hidden-accessible')) {
+                    $prodSel.select2('destroy');
                 }
                 $row.remove();
             } else {
@@ -358,46 +303,40 @@ $(document).ready(function () {
                     $select.val('');
                 }
                 $row.find('.item-qty').val('1');
-                $row.find('.item-price').val('');
-                $row.find('.item-discount-percent').val('');
-                $row.find('.item-tax-percent').val('');
-                $row.find('.item-total').text('0.00');
+                $row.find('.item-source-stock-id').val('');
+                $row.find('.item-stock-info').text('—');
             }
-            recalcTotals();
+            updateTotalItemsCount();
         });
 
-        $(document).on('input', '.item-qty, .item-price, .item-discount-percent, .item-tax-percent', function () {
-            recalcTotals();
-        });
-
-        // When QR code changes, fetch details & update product and MRP
+        // When QR code changes, fetch details & update product and stock info
         $(document).on('change', '.js-qr-select', function () {
             var $select = $(this);
             var $row = $select.closest('tr');
             var qrId = $select.val();
-            var locationType = ($('#location_type').val() || '').toString();
-            var locationId = $('#location_id').val();
+            var fromLocationType = ($('#from_location_type').val() || '').toString();
+            var fromLocationId = $('#from_location_id').val();
 
             if (!qrId) {
-                // Clear product and price if QR cleared
+                // Clear product and stock info if QR cleared
                 var $prodSelect = $row.find('.js-product-select');
                 if ($prodSelect.hasClass('select2-hidden-accessible')) {
                     $prodSelect.val(null).trigger('change');
                 } else {
                     $prodSelect.val('');
                 }
-                $row.find('.item-price').val('');
-                recalcTotals();
+                $row.find('.item-source-stock-id').val('');
+                $row.find('.item-stock-info').text('—');
                 return;
             }
 
             $.ajax({
-                url: SITE_URL + '/sales/qr-info',
+                url: SITE_URL + '/stock-transfers/qr-info',
                 dataType: 'json',
                 data: {
                     qr_id: qrId,
-                    location_type: locationType,
-                    location_id: locationId
+                    from_location_type: fromLocationType,
+                    from_location_id: fromLocationId
                 },
                 success: function (response) {
                     if (!response || !response.success || !response.data) {
@@ -406,15 +345,15 @@ $(document).ready(function () {
                     var d = response.data;
                     var $prodSelect = $row.find('.js-product-select');
 
-                    // If stock is not available for this QR at the selected location, show error and clear selection
+                    // If stock is not available for this QR at the from location, show error and clear selection
                     if (d.hasOwnProperty('stock_available') && d.stock_available === false) {
                         if (typeof toastr !== 'undefined') {
                             var qtyMsg = (typeof d.stock_quantity !== 'undefined' && d.stock_quantity !== null)
                                 ? ' (Available: ' + d.stock_quantity + ')'
                                 : '';
-                            toastr["error"]('Stock not available for this QR at selected location' + qtyMsg);
+                            toastr["error"]('Stock not available for this QR at from location' + qtyMsg);
                         }
-                        // Clear QR, product and price
+                        // Clear QR, product and stock info
                         if ($select.hasClass('select2-hidden-accessible')) {
                             $select.val(null).trigger('change');
                         } else {
@@ -425,8 +364,8 @@ $(document).ready(function () {
                         } else {
                             $prodSelect.val('');
                         }
-                        $row.find('.item-price').val('');
-                        recalcTotals();
+                        $row.find('.item-source-stock-id').val('');
+                        $row.find('.item-stock-info').text('—');
                         return;
                     }
 
@@ -436,20 +375,21 @@ $(document).ready(function () {
                         $prodSelect.append(option).trigger('change');
                     }
 
-                    if (typeof d.mrp !== 'undefined' && d.mrp !== null) {
-                        $row.find('.item-price').val(d.mrp);
-                        recalcTotals();
+                    // Update stock info and source stock ID
+                    if (d.stock_available && typeof d.stock_quantity !== 'undefined' && d.stock_quantity !== null) {
+                        $row.find('.item-stock-info').text('Available: ' + parseFloat(d.stock_quantity).toFixed(2));
+                    } else {
+                        $row.find('.item-stock-info').text('—');
+                    }
+
+                    if (d.source_stock_id) {
+                        $row.find('.item-source-stock-id').val(d.source_stock_id);
                     }
                 }
             });
         });
 
-        $('#discount_amount').on('input', function () {
-            recalcTotals();
-        });
-
-        recalcTotals();
+        updateTotalItemsCount();
     }
 });
-
 
