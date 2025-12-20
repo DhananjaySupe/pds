@@ -1,8 +1,8 @@
 <?php namespace App\Models;
 	use CodeIgniter\Model;
-	class StockReceiptModel extends Model
+	class ReceiptModel extends Model
 	{
-		protected $table = 'stock_receipts';
+		protected $table = 'receipts';
 		protected $primaryKey = 'receipt_id';
 		protected $returnType = 'array';
 		protected $allowedFields = ['receipt_id', 'receipt_number', 'po_id', 'godown_id', 'vendor_id', 'receipt_date', 'total_items', 'received_by', 'notes', 'created_at'];

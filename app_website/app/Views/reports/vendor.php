@@ -163,8 +163,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php if(!empty($stockReceipts)): ?>
-                                    <?php foreach($stockReceipts as $receipt): ?>
+                                <?php if(!empty($receipts)): ?>
+                                    <?php foreach($receipts as $receipt): ?>
                                         <tr>
                                             <td><?= esc($receipt['receipt_number'] ?? '—') ?></td>
                                             <td><?= esc($receipt['po_number'] ?? '—') ?></td>

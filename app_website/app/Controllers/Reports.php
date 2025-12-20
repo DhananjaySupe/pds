@@ -5,7 +5,7 @@ use App\Models\GodownModel;
 use App\Models\ShopModel;
 use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderItemModel;
-use App\Models\StockReceiptModel;
+use App\Models\ReceiptModel;
 use App\Models\StockInventoryModel;
 use App\Models\QrCodeModel;
 use App\Models\SaleModel;
@@ -76,7 +76,7 @@ class Reports extends BaseController
 		}
 
 		$purchaseOrderModel = new PurchaseOrderModel();
-		$stockReceiptModel = new StockReceiptModel();
+		$receiptModel = new ReceiptModel();
 		$qrCodeModel = new QrCodeModel();
 		$stockInventoryModel = new StockInventoryModel();
 
@@ -90,7 +90,7 @@ class Reports extends BaseController
 		$receiptParams = array('vendor_id' => $vendorId);
 		if ($startDate !== '') $receiptParams['receipt_date_from'] = $startDate;
 		if ($endDate !== '') $receiptParams['receipt_date_to'] = $endDate;
-		$stockReceipts = $stockReceiptModel->search($receiptParams);
+		$receipts = $receiptModel->search($receiptParams);
 
 		// QR Codes
 		$qrParams = array('vendor_id' => $vendorId);
@@ -114,7 +114,7 @@ class Reports extends BaseController
 			$totalPurchaseAmount += (float) ($po['final_amount'] ?? 0);
 		}
 
-		$totalReceipts = count($stockReceipts);
+		$totalReceipts = count($receipts);
 		$totalQRCodes = count($qrCodes);
 		$totalInventoryItems = count($stockInventory);
 		$totalInventoryValue = 0;
@@ -141,7 +141,7 @@ class Reports extends BaseController
 
 		$this->setData('vendor', $vendor);
 		$this->setData('purchaseOrders', $purchaseOrders);
-		$this->setData('stockReceipts', $stockReceipts);
+		$this->setData('receipts', $receipts);
 		$this->setData('qrCodes', $qrCodes);
 		$this->setData('stockInventory', $stockInventory);
 		$this->setData('startDate', $startDate);
@@ -185,7 +185,7 @@ class Reports extends BaseController
 		}
 
 		$purchaseOrderModel = new PurchaseOrderModel();
-		$stockReceiptModel = new StockReceiptModel();
+		$receiptModel = new ReceiptModel();
 		$stockInventoryModel = new StockInventoryModel();
 		$stockTransferModel = new StockTransferModel();
 		$shopRequestModel = new ShopRequestModel();
@@ -200,7 +200,7 @@ class Reports extends BaseController
 		$receiptParams = array('godown_id' => $godownId);
 		if ($startDate !== '') $receiptParams['receipt_date_from'] = $startDate;
 		if ($endDate !== '') $receiptParams['receipt_date_to'] = $endDate;
-		$stockReceipts = $stockReceiptModel->search($receiptParams);
+		$receipts = $receiptModel->search($receiptParams);
 
 		// Stock Inventory
 		$inventoryParams = array(
@@ -241,7 +241,7 @@ class Reports extends BaseController
 			$totalPurchaseAmount += (float) ($po['final_amount'] ?? 0);
 		}
 
-		$totalReceipts = count($stockReceipts);
+		$totalReceipts = count($receipts);
 		$totalInventoryItems = count($stockInventory);
 		$totalInventoryValue = 0;
 		$totalInventoryQuantity = 0;
@@ -273,7 +273,7 @@ class Reports extends BaseController
 
 		$this->setData('godown', $godown);
 		$this->setData('purchaseOrders', $purchaseOrders);
-		$this->setData('stockReceipts', $stockReceipts);
+		$this->setData('receipts', $receipts);
 		$this->setData('stockInventory', $stockInventory);
 		$this->setData('transfersFrom', $transfersFrom);
 		$this->setData('transfersTo', $transfersTo);
@@ -643,7 +643,7 @@ class Reports extends BaseController
 		}
 
 		$purchaseOrderModel = new PurchaseOrderModel();
-		$stockReceiptModel = new StockReceiptModel();
+		$receiptModel = new ReceiptModel();
 		$qrCodeModel = new QrCodeModel();
 		$stockInventoryModel = new StockInventoryModel();
 
@@ -657,7 +657,7 @@ class Reports extends BaseController
 		$receiptParams = array('vendor_id' => $vendorId);
 		if ($startDate !== '') $receiptParams['receipt_date_from'] = $startDate;
 		if ($endDate !== '') $receiptParams['receipt_date_to'] = $endDate;
-		$stockReceipts = $stockReceiptModel->search($receiptParams);
+		$receipts = $receiptModel->search($receiptParams);
 
 		// QR Codes
 		$qrParams = array('vendor_id' => $vendorId);
@@ -680,7 +680,7 @@ class Reports extends BaseController
 			$totalPurchaseAmount += (float) ($po['final_amount'] ?? 0);
 		}
 
-		$totalReceipts = count($stockReceipts);
+		$totalReceipts = count($receipts);
 		$totalQRCodes = count($qrCodes);
 		$totalInventoryItems = count($stockInventory);
 		$totalInventoryValue = 0;
@@ -708,7 +708,7 @@ class Reports extends BaseController
 		$data = array(
 			'vendor' => $vendor,
 			'purchaseOrders' => $purchaseOrders,
-			'stockReceipts' => $stockReceipts,
+			'receipts' => $receipts,
 			'qrCodes' => $qrCodes,
 			'stockInventory' => $stockInventory,
 			'startDate' => $startDate,
@@ -743,7 +743,7 @@ class Reports extends BaseController
 		}
 
 		$purchaseOrderModel = new PurchaseOrderModel();
-		$stockReceiptModel = new StockReceiptModel();
+		$receiptModel = new ReceiptModel();
 		$stockInventoryModel = new StockInventoryModel();
 		$stockTransferModel = new StockTransferModel();
 		$shopRequestModel = new ShopRequestModel();
@@ -758,7 +758,7 @@ class Reports extends BaseController
 		$receiptParams = array('godown_id' => $godownId);
 		if ($startDate !== '') $receiptParams['receipt_date_from'] = $startDate;
 		if ($endDate !== '') $receiptParams['receipt_date_to'] = $endDate;
-		$stockReceipts = $stockReceiptModel->search($receiptParams);
+		$receipts = $receiptModel->search($receiptParams);
 
 		// Stock Inventory
 		$inventoryParams = array(
@@ -793,7 +793,7 @@ class Reports extends BaseController
 			$totalPurchaseAmount += (float) ($po['final_amount'] ?? 0);
 		}
 
-		$totalReceipts = count($stockReceipts);
+		$totalReceipts = count($receipts);
 		$totalInventoryItems = count($stockInventory);
 		$totalInventoryQuantity = 0;
 		$totalInventoryValue = 0;
@@ -826,7 +826,7 @@ class Reports extends BaseController
 		$data = array(
 			'godown' => $godown,
 			'purchaseOrders' => $purchaseOrders,
-			'stockReceipts' => $stockReceipts,
+			'receipts' => $receipts,
 			'stockInventory' => $stockInventory,
 			'transfersFrom' => $transfersFrom,
 			'transfersTo' => $transfersTo,
