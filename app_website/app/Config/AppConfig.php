@@ -71,6 +71,13 @@
 			'apiKey' => 'MmvuwPD6BLHn-UxoTXsE9KLJtuIz5OEWZ4tFvQW8pMgGtQypRNVKC_xb5DN8tWPO'
 		];
 
+		// QR Code configuration
+		// Pattern supports: {PO_NUMBER}, {PRODUCT_ID}, {PRODUCT_CODE}, {VENDOR_ID}, {QUANTITY_INDEX}, {TIMESTAMP}
+		public $qrCodePattern = '{PO_NUMBER}-{PRODUCT_CODE}-{QUANTITY_INDEX}';
+
+		// Cron job configuration
+		public $cronKey = 'your-secret-cron-key'; // Change this to a secure random string
+
 		public function __construct()
 		{
 			$this->appEmails = array(

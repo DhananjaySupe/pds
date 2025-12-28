@@ -13,6 +13,9 @@
                 <div class="page-title-box d-sm-flex align-items-center justify-content-between">
                     <h4 class="mb-sm-0"><i class="ri-file-list-3-line me-2"></i>Purchase Order Details</h4>
                     <div class="page-title-right d-flex gap-2">
+                        <a href="<?= site_url('purchase-orders/qrcodes/'.$po['po_id']) ?>" class="btn btn-info btn-label">
+                            <i class="ri-qr-code-line label-icon align-middle fs-16 me-2"></i> View QR Codes
+                        </a>
                         <a href="<?= site_url('purchase-orders/edit/'.$po['po_id']) ?>" class="btn btn-secondary btn-label">
                             <i class="ri-pencil-line label-icon align-middle fs-16 me-2"></i> Edit
                         </a>

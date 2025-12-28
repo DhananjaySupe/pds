@@ -5,7 +5,7 @@
 		protected $table = 'qr_codes';
 		protected $primaryKey = 'qr_id';
 		protected $returnType = 'array';
-		protected $allowedFields = ['qr_id', 'qr_code', 'product_id', 'vendor_id', 'original_quantity', 'current_quantity', 'batch_number', 'manufacturing_date', 'expiry_date', 'purchase_price', 'mrp', 'status', 'created_at', 'last_updated'];
+		protected $allowedFields = ['qr_id', 'qr_code', 'po_id', 'product_id', 'vendor_id', 'original_quantity', 'current_quantity', 'batch_number', 'manufacturing_date', 'expiry_date', 'purchase_price', 'mrp', 'status', 'created_at', 'last_updated'];
 		protected $createdField = 'created_at';
 		protected $updatedField = 'last_updated';
 
@@ -122,6 +122,10 @@
 
 			if (isset($params['vendor_id'])) {
 				$builder->where($this->table . '.vendor_id', $params['vendor_id']);
+			}
+
+			if (isset($params['po_id'])) {
+				$builder->where($this->table . '.po_id', $params['po_id']);
 			}
 
 			if (isset($params['status'])) {

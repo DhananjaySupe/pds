@@ -14,6 +14,9 @@ $routes->set404Override('App\Controllers\Errors::show404');
 /* Ping to check internet connection */
 $routes->get('ping', 'Pages::ping');
 $routes->get('captcha', 'Captcha::generate');
+
+/* Cron jobs */
+$routes->get('cron/update-expiry-tracker', 'Cron::updateExpiryTracker');
 $routes->get('terms-of-use', 'Pages::termsOfUse');
 
 $routes->get('/', 'Home::index');
@@ -59,6 +62,8 @@ $routes->group('purchase-orders', function($routes) {
 	$routes->add('edit/(:num)', 'PurchaseOrders::edit/$1');
 	$routes->add('delete/(:num)', 'PurchaseOrders::delete/$1');
 	$routes->add('view/(:num)', 'PurchaseOrders::view/$1');
+	$routes->add('qrcodes/(:num)', 'PurchaseOrders::view_qrcodes/$1');
+	$routes->get('qrcodes-pdf/(:num)', 'PurchaseOrders::qrcodes_pdf/$1');
 });
 
 $routes->group('customers', function($routes) {

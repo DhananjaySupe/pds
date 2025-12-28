@@ -121,12 +121,13 @@
                             <table class="table table-striped align-middle" id="po-items-table">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width:32%;">Product</th>
-                                        <th style="width:12%;">Qty</th>
-                                        <th style="width:12%;">Unit Price</th>
-                                        <th style="width:12%;">Tax</th>
-                                        <th style="width:12%;">Discount</th>
-                                        <th style="width:15%;">Total</th>
+                                        <th style="width:25%;">Product</th>
+                                        <th style="width:10%;">Qty</th>
+                                        <th style="width:10%;">Unit Price</th>
+                                        <th style="width:10%;">Tax</th>
+                                        <th style="width:10%;">Discount</th>
+                                        <th style="width:12%;">Expiry Date</th>
+                                        <th style="width:13%;">Total</th>
                                         <th style="width:5%;" class="text-center"><i class="ri-more-2-line"></i></th>
                                     </tr>
                                 </thead>
@@ -146,6 +147,7 @@
                                                 <td><input type="number" class="form-control item-price" name="item_unit_price[]" value="<?= esc($it['unit_price'] ?? '') ?>" step="0.01" min="0"></td>
                                                 <td><input type="number" class="form-control item-tax" name="item_tax_amount[]" value="<?= esc($it['tax_amount'] ?? '') ?>" step="0.01" min="0" placeholder="0.00"></td>
                                                 <td><input type="number" class="form-control item-discount" name="item_discount_amount[]" value="<?= esc($it['discount_amount'] ?? '') ?>" step="0.01" min="0" placeholder="0.00"></td>
+                                                <td><input type="date" class="form-control item-expiry" name="item_expiry_date[]" value="<?= esc($it['expiry_date'] ?? '') ?>"></td>
                                                 <td class="item-total text-end fw-semibold">0.00</td>
                                                 <td class="text-center">
                                                     <button type="button" class="btn btn-sm btn-soft-danger btn-remove-item" title="Remove">
@@ -165,6 +167,7 @@
                                             <td><input type="number" class="form-control item-price" name="item_unit_price[]" value="" step="0.01" min="0"></td>
                                             <td><input type="number" class="form-control item-tax" name="item_tax_amount[]" value="" step="0.01" min="0" placeholder="0.00"></td>
                                             <td><input type="number" class="form-control item-discount" name="item_discount_amount[]" value="" step="0.01" min="0" placeholder="0.00"></td>
+                                            <td><input type="date" class="form-control item-expiry" name="item_expiry_date[]" value=""></td>
                                             <td class="item-total text-end fw-semibold">0.00</td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-sm btn-soft-danger btn-remove-item" title="Remove">

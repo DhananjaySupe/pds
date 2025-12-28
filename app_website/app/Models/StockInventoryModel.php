@@ -5,14 +5,13 @@
 		protected $table = 'stock_inventory';
 		protected $primaryKey = 'stock_id';
 		protected $returnType = 'array';
-		protected $allowedFields = ['stock_id', 'qr_id', 'location_type', 'location_id', 'quantity', 'stock_date', 'is_available'];
+		protected $allowedFields = ['stock_id', 'product_id', 'location_type', 'location_id', 'quantity', 'stock_date', 'is_available'];
 
 		public function findByID($id)
 		{
 			$builder = $this->db->table($this->table);
-			$builder->select($this->table . '.*, qr.qr_code, qr.batch_number, qr.expiry_date as qr_expiry_date, qr.status as qr_status, products.product_code, products.product_name, products.unit_type, products.base_unit, godowns.godown_name, shops.shop_name');
-			$builder->join('qr_codes as qr', 'qr.qr_id = ' . $this->table . '.qr_id', 'left');
-			$builder->join('products', 'products.product_id = qr.product_id', 'left');
+			$builder->select($this->table . '.*, products.product_code, products.product_name, products.unit_type, products.base_unit, godowns.godown_name, shops.shop_name');
+			$builder->join('products', 'products.product_id = ' . $this->table . '.product_id', 'left');
 			// Conditional joins prevent wrong matches when IDs overlap across tables
 			$builder->join('godowns', "godowns.godown_id = {$this->table}.location_id AND {$this->table}.location_type = 'godown'", 'left');
 			$builder->join('shops', "shops.shop_id = {$this->table}.location_id AND {$this->table}.location_type = 'shop'", 'left');
@@ -22,11 +21,11 @@
 			return $result ? $result[0] : null;
 		}
 
-		public function findByQRID($qr_id, $location_type = null, $location_id = null)
+		public function findByProductID($product_id, $location_type = null, $location_id = null)
 		{
 			$builder = $this->db->table($this->table);
 			$builder->select($this->table . '.*');
-			$builder->where($this->table . '.qr_id', $qr_id);
+			$builder->where($this->table . '.product_id', $product_id);
 
 			if ($location_type !== null) {
 				$builder->where($this->table . '.location_type', $location_type);
@@ -41,11 +40,11 @@
 			return $builder->get()->getResultArray();
 		}
 
-		public function findLatestByQRIDLocation($qr_id, $location_type, $location_id)
+		public function findLatestByProductIDLocation($product_id, $location_type, $location_id)
 		{
 			$builder = $this->db->table($this->table);
 			$builder->select($this->table . '.*');
-			$builder->where($this->table . '.qr_id', $qr_id);
+			$builder->where($this->table . '.product_id', $product_id);
 			$builder->where($this->table . '.location_type', $location_type);
 			$builder->where($this->table . '.location_id', $location_id);
 			$builder->orderBy($this->table . '.stock_date', 'DESC');
@@ -58,9 +57,8 @@
 		public function findByLocation($location_type, $location_id, $is_available = null)
 		{
 			$builder = $this->db->table($this->table);
-			$builder->select($this->table . '.*, qr.qr_code, products.product_code, products.product_name');
-			$builder->join('qr_codes as qr', 'qr.qr_id = ' . $this->table . '.qr_id', 'left');
-			$builder->join('products', 'products.product_id = qr.product_id', 'left');
+			$builder->select($this->table . '.*, products.product_code, products.product_name');
+			$builder->join('products', 'products.product_id = ' . $this->table . '.product_id', 'left');
 			$builder->where($this->table . '.location_type', $location_type);
 			$builder->where($this->table . '.location_id', $location_id);
 
@@ -81,21 +79,17 @@
 		public function search($params = array())
 		{
 			$builder = $this->db->table($this->table);
-			$builder->select($this->table . '.*, qr.qr_code, qr.batch_number, qr.expiry_date as qr_expiry_date, qr.status as qr_status, products.product_code, products.product_name, products.category, products.brand, godowns.godown_name, shops.shop_name');
-			$builder->join('qr_codes as qr', 'qr.qr_id = ' . $this->table . '.qr_id', 'left');
-			$builder->join('products', 'products.product_id = qr.product_id', 'left');
+			$builder->select($this->table . '.*, products.product_code, products.product_name, products.category, products.brand, godowns.godown_name, shops.shop_name');
+			$builder->join('products', 'products.product_id = ' . $this->table . '.product_id', 'left');
 			// Conditional joins prevent wrong matches when IDs overlap across tables
 			$builder->join('godowns', "godowns.godown_id = {$this->table}.location_id AND {$this->table}.location_type = 'godown'", 'left');
 			$builder->join('shops', "shops.shop_id = {$this->table}.location_id AND {$this->table}.location_type = 'shop'", 'left');
 
 			if (isset($params['keywords'])) {
 				$builder->groupStart();
-				$builder->like('qr.qr_code', $params['keywords'])
-					->orLike('qr.batch_number', $params['keywords'])
+				$builder->like('products.product_name', $params['keywords'])
 					->orLike('products.product_name', $params['keywords'])
 					->orLike('products.product_code', $params['keywords'])
-					->orLike('products.category', $params['keywords'])
-					->orLike('products.brand', $params['keywords'])
 					->orLike('godowns.godown_name', $params['keywords'])
 					->orLike('shops.shop_name', $params['keywords']);
 				$builder->groupEnd();
@@ -105,12 +99,8 @@
 				$builder->where($this->table . '.stock_id', $params['stock_id']);
 			}
 
-			if (isset($params['qr_id'])) {
-				$builder->where($this->table . '.qr_id', $params['qr_id']);
-			}
-
 			if (isset($params['product_id'])) {
-				$builder->where('qr.product_id', $params['product_id']);
+				$builder->where($this->table . '.product_id', $params['product_id']);
 			}
 
 			if (isset($params['location_type'])) {
@@ -143,22 +133,6 @@
 
 			if (isset($params['max_quantity'])) {
 				$builder->where($this->table . '.quantity <=', $params['max_quantity']);
-			}
-
-			if (isset($params['qr_expiry_date'])) {
-				$builder->where('DATE(qr.expiry_date)', $params['qr_expiry_date']);
-			}
-
-			if (isset($params['qr_expiry_date_from'])) {
-				$builder->where('DATE(qr.expiry_date) >=', $params['qr_expiry_date_from']);
-			}
-
-			if (isset($params['qr_expiry_date_to'])) {
-				$builder->where('DATE(qr.expiry_date) <=', $params['qr_expiry_date_to']);
-			}
-
-			if (isset($params['qr_status'])) {
-				$builder->where('qr.status', $params['qr_status']);
 			}
 
 			if (isset($params['count']) && $params['count']) {

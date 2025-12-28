@@ -5,7 +5,11 @@ use App\Models\PurchaseOrderItemModel;
 use App\Models\ProductModel;
 use App\Models\VendorModel;
 use App\Models\GodownModel;
+use App\Models\QrCodeModel;
+use App\Models\StockInventoryModel;
+use App\Models\ExpiryTrackerModel;
 use App\Libraries\ExcelExporter;
+use App\Libraries\PDF;
 
 class PurchaseOrders extends BaseController
 {
@@ -393,6 +397,45 @@ class PurchaseOrders extends BaseController
 						}
 						$itemModel->insert($insert);
 					}
+
+					// Generate QR codes for each product item and quantity
+					$qrCodeModel = new QrCodeModel();
+					$expiryTrackerModel = new ExpiryTrackerModel();
+					$this->generateQRCodesForPurchaseOrder($poId, trim($post['po_number']), (int) $post['vendor_id'], (int) $post['godown_id'], $items, $productModel, $qrCodeModel, $expiryTrackerModel);
+
+					// Update stock inventory for the godown
+					$stockInventoryModel = new StockInventoryModel();
+					$godownId = (int) $post['godown_id'];
+					$orderDate = !empty($post['order_date']) ? $post['order_date'] : date('Y-m-d');
+
+					foreach ($items as $item) {
+						$productId = (int) $item['product_id'];
+						$quantity = (float) $item['quantity'];
+
+						// Check if stock inventory already exists for this product and location
+						$existingStock = $stockInventoryModel->findLatestByProductIDLocation($productId, 'godown', $godownId);
+
+						if ($existingStock) {
+							// Update existing stock quantity
+							$newQuantity = (float) ($existingStock['quantity'] ?? 0) + $quantity;
+							$stockInventoryModel->update($existingStock['stock_id'], array(
+								'quantity' => $newQuantity,
+								'stock_date' => $orderDate,
+								'is_available' => 1,
+							));
+						} else {
+							// Create new stock inventory entry
+							$stockInventoryModel->insert(array(
+								'product_id' => $productId,
+								'location_type' => 'godown',
+								'location_id' => $godownId,
+								'quantity' => $quantity,
+								'stock_date' => $orderDate,
+								'is_available' => 1,
+							));
+						}
+					}
+
 					return redirect()->to('purchase-orders/view/' . $poId);
 				}
 				$error = 'Error creating purchase order. Please try again.';
@@ -606,6 +649,72 @@ class PurchaseOrders extends BaseController
 		return view('purchase_orders/view', $this->viewdata);
 	}
 
+	public function view_qrcodes($id = null)
+	{
+		if (!$this->isUserLoggedIn()) {
+			return redirect()->route('login');
+		}
+
+		$poModel = new PurchaseOrderModel();
+		$qrCodeModel = new QrCodeModel();
+
+		$po = $poModel->findByID($id);
+		if (!$po) {
+			throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+		}
+
+		$qrCodes = $qrCodeModel->search(array('po_id' => $id));
+
+		$this->setData('po', $po);
+		$this->setData('qrCodes', $qrCodes);
+		$this->pageTitle('Purchase Order QR Codes');
+		return view('purchase_orders/qr_codes', $this->viewdata);
+	}
+
+	public function qrcodes_pdf($id = null)
+	{
+		if (!$this->isUserLoggedIn()) {
+			return redirect()->route('login');
+		}
+
+		$poModel = new PurchaseOrderModel();
+		$qrCodeModel = new QrCodeModel();
+
+		$po = $poModel->findByID($id);
+		if (!$po) {
+			throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
+		}
+
+		$qrCodes = $qrCodeModel->search(array('po_id' => $id));
+
+		// Convert QR code images to base64 for PDF embedding
+		$qrCodesWithImages = array();
+		foreach ($qrCodes as $qr) {
+			$qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' . urlencode($qr['qr_code']);
+
+			// Download and convert to base64
+			$imageData = @file_get_contents($qrImageUrl);
+			if ($imageData !== false) {
+				$qr['qr_image_base64'] = 'data:image/png;base64,' . base64_encode($imageData);
+			} else {
+				$qr['qr_image_base64'] = '';
+			}
+
+			$qrCodesWithImages[] = $qr;
+		}
+
+		$html = view('templates/documents/qr_code', array('po' => $po, 'qrCodes' => $qrCodesWithImages));
+
+		$pdf = new PDF();
+		$filename = 'qr_codes_po_' . $po['po_number'] . '_' . date('YmdHis') . '.pdf';
+		$pdf->generate($html, array(
+			'name' => $filename,
+			'download' => true,
+			'orientation' => 'portrait',
+			'paper' => 'a4'
+		));
+	}
+
 	public function delete($id = null)
 	{
 		if (!$this->isUserLoggedIn()) {
@@ -614,13 +723,72 @@ class PurchaseOrders extends BaseController
 
 		$poModel = new PurchaseOrderModel();
 		$itemModel = new PurchaseOrderItemModel();
+		$qrCodeModel = new QrCodeModel();
+		$stockInventoryModel = new StockInventoryModel();
+		$expiryTrackerModel = new ExpiryTrackerModel();
+
 		$po = $poModel->findByID($id);
 		if (!$po) {
 			return $this->response->setJSON(['success' => false, 'message' => 'Purchase order not found!']);
 		}
 
+		// Get purchase order items to revert stock
+		$items = $itemModel->findByPOID($id);
+		$godownId = (int) ($po['godown_id'] ?? 0);
+
+		// Get all QR codes for this purchase order
+		$qrCodes = $qrCodeModel->search(array('po_id' => $id));
+		$qrIds = array();
+		foreach ($qrCodes as $qr) {
+			$qrIds[] = (int) $qr['qr_id'];
+		}
+
+		// Revert stock inventory
+		if ($godownId > 0 && !empty($items)) {
+			foreach ($items as $item) {
+				$productId = (int) $item['product_id'];
+				$quantity = (float) $item['quantity'];
+
+				// Find existing stock inventory
+				$existingStock = $stockInventoryModel->findLatestByProductIDLocation($productId, 'godown', $godownId);
+
+				if ($existingStock) {
+					$currentQuantity = (float) ($existingStock['quantity'] ?? 0);
+					$newQuantity = $currentQuantity - $quantity;
+
+					// If quantity becomes zero or negative, delete the stock entry
+					if ($newQuantity <= 0) {
+						$stockInventoryModel->delete($existingStock['stock_id']);
+					} else {
+						// Update stock quantity
+						$stockInventoryModel->update($existingStock['stock_id'], array(
+							'quantity' => $newQuantity,
+						));
+					}
+				}
+			}
+		}
+
+		// Delete expiry tracker entries for QR codes
+		if (!empty($qrIds)) {
+			foreach ($qrIds as $qrId) {
+				$expiryTrackerModel->where('qr_id', $qrId)->delete();
+			}
+		}
+
+		// Delete QR codes
+		if (!empty($qrIds)) {
+			foreach ($qrIds as $qrId) {
+				$qrCodeModel->delete($qrId);
+			}
+		}
+
+		// Delete purchase order items
 		$itemModel->where('po_id', (int) $id)->delete();
+
+		// Delete purchase order
 		$poModel->delete($id);
+
 		return $this->response->setJSON(['success' => true, 'message' => 'Purchase order deleted successfully!']);
 	}
 
@@ -632,18 +800,20 @@ class PurchaseOrders extends BaseController
 		$unitPrices = $post['item_unit_price'] ?? array();
 		$taxAmounts = $post['item_tax_amount'] ?? array();
 		$discountAmounts = $post['item_discount_amount'] ?? array();
+		$expiryDates = $post['item_expiry_date'] ?? array();
 
 		if (!is_array($productIds) || !is_array($quantities) || !is_array($unitPrices) || !is_array($taxAmounts) || !is_array($discountAmounts)) {
 			return $items;
 		}
 
-		$count = max(count($productIds), count($quantities), count($unitPrices), count($taxAmounts), count($discountAmounts));
+		$count = max(count($productIds), count($quantities), count($unitPrices), count($taxAmounts), count($discountAmounts), count($expiryDates));
 		for ($i = 0; $i < $count; $i++) {
 			$pid = isset($productIds[$i]) ? (int) $productIds[$i] : 0;
 			$qty = isset($quantities[$i]) && $quantities[$i] !== '' ? (float) $quantities[$i] : 0;
 			$price = isset($unitPrices[$i]) && $unitPrices[$i] !== '' ? (float) $unitPrices[$i] : 0;
 			$tax = isset($taxAmounts[$i]) && $taxAmounts[$i] !== '' ? (float) $taxAmounts[$i] : 0;
 			$discount = isset($discountAmounts[$i]) && $discountAmounts[$i] !== '' ? (float) $discountAmounts[$i] : 0;
+			$expiryDate = isset($expiryDates[$i]) && $expiryDates[$i] !== '' ? trim($expiryDates[$i]) : null;
 
 			if ($pid <= 0 || $qty <= 0) {
 				continue;
@@ -659,6 +829,7 @@ class PurchaseOrders extends BaseController
 				'unit_price' => $price,
 				'tax_amount' => $tax,
 				'discount_amount' => $discount,
+				'expiry_date' => $expiryDate,
 				'base_total' => $baseTotal,
 				'total_price' => $total,
 			);
@@ -714,6 +885,79 @@ class PurchaseOrders extends BaseController
 			}
 		}
 		return $out;
+	}
+
+	private function generateQRCodeString($pattern, $poNumber, $productId, $productCode, $vendorId, $quantityIndex, $timestamp = null)
+	{
+		if ($timestamp === null) {
+			$timestamp = time();
+		}
+
+		$qrString = $pattern;
+		$qrString = str_replace('{PO_NUMBER}', $poNumber, $qrString);
+		$qrString = str_replace('{PRODUCT_ID}', (string) $productId, $qrString);
+		$qrString = str_replace('{PRODUCT_CODE}', $productCode, $qrString);
+		$qrString = str_replace('{VENDOR_ID}', (string) $vendorId, $qrString);
+		$qrString = str_replace('{QUANTITY_INDEX}', (string) $quantityIndex, $qrString);
+		$qrString = str_replace('{TIMESTAMP}', (string) $timestamp, $qrString);
+
+		return $qrString;
+	}
+
+	private function generateQRCodesForPurchaseOrder($poId, $poNumber, $vendorId, $godownId, $items, ProductModel $productModel, QrCodeModel $qrCodeModel, ExpiryTrackerModel $expiryTrackerModel)
+	{
+		$pattern = $this->AppConfig->qrCodePattern ?? '{PO_NUMBER}-{PRODUCT_CODE}-{QUANTITY_INDEX}';
+
+		foreach ($items as $item) {
+			$productId = (int) $item['product_id'];
+			$quantity = (float) $item['quantity'];
+			$expiryDate = !empty($item['expiry_date']) ? $item['expiry_date'] : null;
+
+			// Get product details
+			$product = $productModel->findByID($productId);
+			if (!$product) {
+				continue;
+			}
+
+			$productCode = $product['product_code'] ?? 'PROD' . $productId;
+			$unitPrice = (float) ($item['unit_price'] ?? 0);
+
+			// Generate one QR code for each unit of quantity
+			for ($i = 1; $i <= $quantity; $i++) {
+				$qrString = $this->generateQRCodeString($pattern, $poNumber, $productId, $productCode, $vendorId, $i);
+
+				// Check if QR code already exists
+				$existing = $qrCodeModel->findByQRCode($qrString);
+				if ($existing) {
+					// If exists, append timestamp to make it unique
+					$qrString = $this->generateQRCodeString($pattern, $poNumber, $productId, $productCode, $vendorId, $i, time());
+				}
+
+				$qrId = $qrCodeModel->insert(array(
+					'qr_code' => $qrString,
+					'po_id' => $poId,
+					'product_id' => $productId,
+					'vendor_id' => $vendorId,
+					'original_quantity' => 1,
+					'current_quantity' => 1,
+					'purchase_price' => $unitPrice,
+					'expiry_date' => $expiryDate,
+					'status' => 'active',
+					'created_at' => date('Y-m-d H:i:s'),
+				));
+
+				// Create expiry tracker entry if expiry_date is provided
+				if ($qrId && $expiryDate && $godownId > 0) {
+					$expiryTrackerModel->insert(array(
+						'qr_id' => $qrId,
+						'product_id' => $productId,
+						'location_type' => 'godown',
+						'location_id' => $godownId,
+						'expiry_date' => $expiryDate,
+					));
+				}
+			}
+		}
 	}
 }
 

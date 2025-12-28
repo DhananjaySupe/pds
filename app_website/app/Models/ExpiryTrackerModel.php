@@ -5,7 +5,7 @@
 		protected $table = 'expiry_tracker';
 		protected $primaryKey = 'expiry_id';
 		protected $returnType = 'array';
-		protected $allowedFields = ['expiry_id', 'qr_id', 'product_id', 'location_type', 'location_id', 'expiry_date'];
+		protected $allowedFields = ['expiry_id', 'qr_id', 'product_id', 'location_type', 'location_id', 'expiry_date', 'days_remaining', 'status'];
 
 		public function findByID($id)
 		{
